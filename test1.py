@@ -5,7 +5,7 @@
 # -----------------------------------------------------------------------------
 from ply.lex import TOKEN
 
-reserved = {
+keyword = {
     'and' : 'AND',
     'bool' : 'BOOL',
     'class' : 'CLASS',
@@ -27,7 +27,28 @@ reserved = {
     'while' : 'WHILE',
 }
 
-# List of token names + reserved
+# List of operators
+operator = {
+    '{' : 'lbrace',
+    '}' : 'rbrace',
+    '(' : 'lpar',
+    ')' : 'rpar',
+    ':' : 'colon',
+    ';' : 'semicolon',
+    ',' : 'coma',
+    '+' : 'plus',
+    '-' : 'minus',
+    '*' : 'times',
+    '/' : 'div',
+    '^' : 'pow',
+    '.' : 'dot',
+    '=' : 'equal',
+    '<' : 'lower',
+    '<=' : 'lower_equal',
+    '<-' : 'asign',
+}
+
+# List of token names + keyword
 tokens = [
     'lowercase_letter',
     'uppercase_letter',
@@ -36,14 +57,20 @@ tokens = [
     'digit',
     'hex_digit',
     'integer_literal_r',
-    'integer_literal_r_n',
     'integer_literal',
-    'ID',
-    'test'] + list(reserved.values())
+    'whitespace',
+    'newline',
+    'type_identifier',
+    'object_identifier',
+    'operator',
+    'test'] + list(keyword.values()) + list(operator.values())
 
 ###  Tokens
 # Whitespace
-#t_ignore_whitespace = r'[ \t\n\r\f\v]'
+#t_whitespace = r'[ \t\n\r\f]'
+
+# Literals
+#literals = [ '+','-','*','/' ]
 
 # Letters
 #t_lowercase_letter = r'[a-z]'
@@ -66,37 +93,76 @@ def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count("\n")
     t.lexer.line_end_pos = t.lexpos
+    return t
 
-def t_ignore_whitespace(t):
-    r'[ \t\r\f\v]'
-    pass
+def t_whitespace(t):
+    r'[ \t\r\f]'
+    return t
 
 @TOKEN(t_integer_literal_r)
 def t_integer_literal(t):
+    # Get next token without moving lexer state
+    next_tok = get_next_token(t)
+    # Checking for eof
+    if not next_tok:
+        return t
+
+    ## probably should change to if type_identifier or object_identifier => pass
+    
+    # Checking for next token to be whitespace or operator
+    if (next_tok.type in (["whitespace", "newline"] + list(operator.values()))) :
+        return t
+    else :
+        # Print error
+        error_str = file_name + ":" + str(t.lexer.lineno)
+        error_str += ":" + str(t.lexpos - t.lexer.line_end_pos)
+        error_str += ": " + str(t.value) + str(next_tok.value)
+        error_str += " is not a valid integer literal"
+        print(error_str)
+
+        # Discard next token
+        t.lexer.token()
+
+def t_operator_long(t):
+    r'<-|<='
+    t.type = operator.get(t.value,'operator')
     return t
 
-def t_ID(t):
+def t_operator(t):
+    r'[\{\}\(\)<\.=\:\-;\*\+,/\^]'
+    t.type = operator.get(t.value,'operator')
+    return t
+
+def t_type_identifier(t):
+    r'[A-Z][a-zA-Z_0-9]*'
+    t.type = keyword.get(t.value,'type_identifier')    # Check for keyword words
+    return t
+
+def t_object_identifier(t):
     r'[a-z][a-zA-Z_0-9]*'
-    t.type = reserved.get(t.value,'ID')    # Check for reserved words
+    t.type = keyword.get(t.value,'object_identifier')    # Check for keyword words
     return t
-
-
 
 ###  Error handling
 def t_error(t):
-    token_str = file_name + ":" + str(t.lexer.lineno)
-    token_str += ":" + str(t.lexpos - t.lexer.line_end_pos)
-    token_str += ": Invalid character '" + t.value[0] + "'"
-    print(token_str)
+    error_str = file_name + ":" + str(t.lexer.lineno)
+    error_str += ":" + str(t.lexpos - t.lexer.line_end_pos)
+    error_str += ": Invalid character '" + t.value[0] + "'"
+    print(error_str)
     t.lexer.skip(1)
 
 
-####  Comment Mode
-# Declare the state
+#####  Additionnal mode
+# Declare the states/modes of the lexer
 states = (
     ('commentmode','exclusive'),
+#    ('stringmode','exclusive'),
 )
 
+####  String mode
+
+
+####  Comment Mode
 # Match the first (*. Enter commentmode state.
 def t_nestedcomment(t):
     r'\(\*'
@@ -135,10 +201,10 @@ def t_commentmode_error(t):
 
 # For when comment is not closed
 def t_commentmode_eof(t):
-    token_str = file_name + ":" + str(t.lexer.comment_start_line)
-    token_str += ":" + str(t.lexer.comment_start_column)
-    token_str += ": Multi-line comment is not terminated when end-of-file is reached"
-    print(token_str)
+    error_str = file_name + ":" + str(t.lexer.comment_start_line)
+    error_str += ":" + str(t.lexer.comment_start_column)
+    error_str += ": Multi-line comment is not terminated when end-of-file is reached"
+    print(error_str)
 
 
 ##### Build the lexer
@@ -148,15 +214,32 @@ lexer.line_end_pos = 0
 
 # Test it out
 data = '''
-a lol 502
+a lol 502 +
+327+
 0x7
-//hu 12
+// hu 12
+bool
 someFun42
+{}
+()
+<-
+<=
+<
+=
+.
+:
+;
+,
+-
++
+*
+/
+^
 someFun 42
 0x45
 0xabcdefgh
 and
-'''
+45'''
 
 # Compute column.
 #     input is the input text string
@@ -164,6 +247,23 @@ and
 def find_column(input, token):
     line_start = input.rfind('\n', 0, token.lexpos) + 1
     return (token.lexpos - line_start) + 1
+
+# Get next token without moving forward
+def get_next_token(token):
+    # Save all variables from lexer
+    saved_lexpos = token.lexer.lexpos
+    saved_lineno = token.lexer.lineno
+    saved_end_pos = token.lexer.line_end_pos
+
+    # Get next token
+    next_token = token.lexer.token()
+
+    # Restore variables
+    token.lexer.lexpos = saved_lexpos
+    token.lexer.lineno = saved_lineno
+    token.lexer.line_end_pos = saved_end_pos
+
+    return next_token
 
 # Give the lexer some input
 lexer.input(data)
@@ -175,8 +275,10 @@ while True:
     tok = lexer.token()
     if not tok:
         break     # No more input
-    token_str = str(tok.lineno) + "," + str(find_column(data,tok)) + "," + str(tok.type)
-    #if(tok.type == "hex_digit"):
-    token_str += ("," + str(tok.value))
-    #TODO
-    print(token_str)
+    # Ignore whitespace and newline
+    if not (tok.type == "whitespace" or tok.type == "newline") :
+        token_str = str(tok.lineno) + "," + str(find_column(data,tok)) + "," + str(tok.type)
+        #if(tok.type == "hex_digit"):
+        token_str += ("," + str(tok.value))
+        #TODO
+        print(token_str)
