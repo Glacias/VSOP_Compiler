@@ -179,6 +179,12 @@ def t_stringmode_escaped_char(t):
     elif(t.value == '\\x00'):
         error_message(t, "Null character inside string")
         exit(1)
+    # if escaped hexa char
+    elif('x' in t.value):
+        asciival = int(t.value[2:], 16)
+        # If char printable
+        if((asciival >= 32) and (asciival <= 126)):
+            t.value = chr(asciival)
 
     # \n => \x0a and check for \ to a new line
     if(t.value == '\\n'):
@@ -189,6 +195,11 @@ def t_stringmode_escaped_char(t):
         t.lexer.line_end_pos = t.lexpos
     else:
         t.lexer.stringvalue += t.value
+
+def t_stringmode_unknown_escaped_char(t):
+    r'(\\x..)|(\\.)'
+    error_message(t, "Unknown escaped char \"" + t.value + "\"")
+    exit(1)
 
 # For when comment is not closed
 def t_stringmode_eof(t):
@@ -215,6 +226,10 @@ def t_stringmode_newline(t):
 def t_stringmode_regular_char(t):
     r'.'
     asciival = ord(t.value)
+    # If null char => error
+    if(asciival == 0):
+        error_message(t, "Null character inside string")
+        exit(1)
     # If char printable
     if((asciival >= 32) and (asciival <= 126)):
         t.lexer.stringvalue += t.value
@@ -242,7 +257,15 @@ def t_integer_literal(t):
         
     # Checking for next token to be whitespace or operator
     if not (next_tok.type in (["type_identifier", "object_identifier"])) :
-        t.value = int(t.value, 0)
+        # If 0
+        if (t.value == "0"):
+            t.value = int(0)
+        # If hexa
+        elif("x" in t.value):
+            t.value = int(t.value, 0)
+        # If number remove leading 0
+        else:
+            t.value = int(t.value.lstrip("0"), 0)
         return t
     else :
         # Print error
@@ -301,7 +324,7 @@ someFun42
 a\te
 someFun 42
 0x45
-0xabcdefgh
+0xabcdef gh
 '''
 
 def error_message(token, description):
@@ -328,9 +351,11 @@ def get_next_token(token):
     return next_token
 
 # Give the lexer some input
-lexer.input(data)
 global file_name
 file_name = "FILENAME"
+f = open("teacher/05-hex-numbers.vsop", "r")
+#data = f.read()
+lexer.input(data)
 
 # Tokenize
 while True:
