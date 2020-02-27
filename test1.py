@@ -214,7 +214,17 @@ def t_stringmode_newline(t):
 # Regular char
 def t_stringmode_regular_char(t):
     r'.'
-    t.lexer.stringvalue += t.value
+    asciival = ord(t.value)
+    # If char printable
+    if((asciival >= 32) and (asciival <= 126)):
+        t.lexer.stringvalue += t.value
+    else:
+        hexa_str = str(hex(asciival))
+        # Need to add a zero if <16
+        if(asciival < 16):
+            t.lexer.stringvalue += "\\x0" + hexa_str[2]
+        else:
+            t.lexer.stringvalue += "\\x" + hexa_str[2:]
 
 # Skip wrong charac
 def t_stringmode_error(t):
@@ -284,7 +294,7 @@ ing."
 "Here comes (* Zorglub *)"
 "Uninterrupted string // Zorglub"
 " some thing \\b \\" bool \\r"
-"\\x66oo\\\\bar\\t\\"N M\\"\\n"
+"\\x66oo\\\\bar\v\\"N M\\"\\n"
 // hu 12
 bool
 someFun42
