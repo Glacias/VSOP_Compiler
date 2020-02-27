@@ -325,6 +325,7 @@ a\te
 someFun 42
 0x45
 0xabcdef gh
+lol
 '''
 
 def error_message(token, description):
