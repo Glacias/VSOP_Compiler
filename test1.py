@@ -5,27 +5,27 @@
 # -----------------------------------------------------------------------------
 from ply.lex import TOKEN
 
-keyword = {
-    'and' : 'AND',
-    'bool' : 'BOOL',
-    'class' : 'CLASS',
-    'do' : 'DO',
-    'extends' : 'EXTENDS',
-    'false' : 'FALSE',
-    'in' : 'IN',
-    'int32' : 'INT32',
-    'isnull' : 'ISNULL',
-    'let' : 'LET',
-    'new' : 'NEW',
-    'not' : 'NOT',
-    'string' : 'STRING',
-    'true': 'TRUE',
-    'unit' : 'UNIT',
-    'if' : 'IF',
-    'then' : 'THEN',
-    'else' : 'ELSE',
-    'while' : 'WHILE',
-}
+keyword = [
+    'and',
+    'bool',
+    'class',
+    'do',
+    'extends',
+    'false',
+    'in',
+    'int32',
+    'isnull',
+    'let',
+    'new',
+    'not',
+    'string',
+    'true',
+    'unit',
+    'if',
+    'then',
+    'else',
+    'while',
+]
 
 # List of operators
 operator = {
@@ -66,7 +66,7 @@ tokens = [
     'string_literal',
     'escape_char',
     'escaped_char_r',
-    'test'] + list(keyword.values()) + list(operator.values())
+    'test'] + keyword + list(operator.values())
 
 ###  Tokens
 # Whitespace
@@ -274,12 +274,16 @@ def t_integer_literal(t):
 
 def t_type_identifier(t):
     r'[A-Z][a-zA-Z_0-9]*'
-    t.type = keyword.get(t.value,'type_identifier')    # Check for keyword words
+    # Check for keyword words
+    if(t.value in keyword):
+        t.type = t.value
     return t
 
 def t_object_identifier(t):
     r'[a-z][a-zA-Z_0-9]*'
-    t.type = keyword.get(t.value,'object_identifier')    # Check for keyword words
+    # Check for keyword words
+    if(t.value in keyword):
+        t.type = t.value
     return t
 
 def t_operator_long(t):
@@ -297,8 +301,37 @@ def t_error(t):
     error_message(t, "Invalid character '" + t.value[0] + "'")
     exit(1)
 
+
+##### General Functions
+
+def error_message(token, description):
+    error_str = file_name + ":" + str(token.lexer.lineno)
+    error_str += ":" + str(token.lexpos - token.lexer.line_end_pos)
+    error_str += ": " + description
+    print(error_str)
+
+# Get next token without moving forward
+def get_next_token(token):
+    # Save all variables from lexer
+    saved_lexpos = token.lexer.lexpos
+    saved_lineno = token.lexer.lineno
+    saved_end_pos = token.lexer.line_end_pos
+
+    # Get next token
+    next_token = token.lexer.token()
+
+    # Restore variables
+    token.lexer.lexpos = saved_lexpos
+    token.lexer.lineno = saved_lineno
+    token.lexer.line_end_pos = saved_end_pos
+
+    return next_token
+
+
 ##### Build the lexer
 import ply.lex as lex
+
+
 lexer = lex.lex()
 lexer.line_end_pos = 0
 
@@ -328,29 +361,6 @@ someFun 42
 lol
 '''
 
-def error_message(token, description):
-    error_str = file_name + ":" + str(token.lexer.lineno)
-    error_str += ":" + str(token.lexpos - token.lexer.line_end_pos)
-    error_str += ": " + description
-    print(error_str)
-
-# Get next token without moving forward
-def get_next_token(token):
-    # Save all variables from lexer
-    saved_lexpos = token.lexer.lexpos
-    saved_lineno = token.lexer.lineno
-    saved_end_pos = token.lexer.line_end_pos
-
-    # Get next token
-    next_token = token.lexer.token()
-
-    # Restore variables
-    token.lexer.lexpos = saved_lexpos
-    token.lexer.lineno = saved_lineno
-    token.lexer.line_end_pos = saved_end_pos
-
-    return next_token
-
 # Give the lexer some input
 global file_name
 file_name = "FILENAME"
@@ -363,17 +373,21 @@ while True:
     tok = lexer.token()
     if not tok:
         break     # No more input
+
     # Check for string
     if (tok.type == "string_literal"):
-        token_str = str(lexer.string_start_line) + "," + str(lexer.string_start_column) + "," + str(tok.type)
-        #if(tok.type == "hex_digit"):
+        token_str = str(lexer.string_start_line) + "," + str(lexer.string_start_column) + "," + tok.type.replace("_","-")
         token_str += ("," + str(tok.value))
-        #TODO
         print(token_str)
+
+    # Check for string
+    elif (tok.type == "type_identifier" or tok.type == "object_identifier" or tok.type == "integer_literal"):
+        token_str = str(tok.lineno) + "," + str(tok.lexpos - lexer.line_end_pos) + "," + tok.type.replace("_","-")
+        token_str += ("," + str(tok.value))
+        print(token_str)        
+
     # Ignore whitespace and newline
     elif not (tok.type == "whitespace" or tok.type == "newline") :
-        token_str = str(tok.lineno) + "," + str(tok.lexpos - lexer.line_end_pos) + "," + str(tok.type)
-        #if(tok.type == "hex_digit"):
-        token_str += ("," + str(tok.value))
-        #TODO
+        token_str = str(tok.lineno) + "," + str(tok.lexpos - lexer.line_end_pos) + "," + tok.type.replace("_","-")
+        #token_str += ("," + str(tok.value))
         print(token_str)
