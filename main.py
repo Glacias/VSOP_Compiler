@@ -1,7 +1,9 @@
 # -----------------------------------------------------------------------------
-# test1.py
+# main.py --lex <SOURCE-FILE>
 #
-# A simple test
+# File responsible for the lexical analysis
+# Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
+# University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
 # -----------------------------------------------------------------------------
 from ply.lex import TOKEN
 import argparse
@@ -71,17 +73,6 @@ tokens = [
     'test'] + keyword + list(operator.values())
 
 ###  Tokens
-# Whitespace
-#t_whitespace = r'[ \t\n\r\f]'
-
-# Literals
-#literals = [ '+','-','*','/' ]
-
-# Letters
-#t_lowercase_letter = r'[a-z]'
-#t_uppercase_letter = r'[A-Z]'
-#t_letter = r'(' + t_lowercase_letter + r'|' + t_uppercase_letter + r')'
-
 # Numbers
 t_bin_digit = r'[0-1]';
 t_digit = r'(' + t_bin_digit + r'|' + r'[2-9]' + r')'
@@ -135,7 +126,6 @@ def t_commentmode_lnestedcom(t):
 def t_commentmode_rnestedcom(t):
     r'\*\)'
     t.lexer.level -=1
-
     # If end of nested comment, return to initial
     if t.lexer.level == 0:
         t.lexer.begin('INITIAL')
@@ -255,7 +245,6 @@ def t_stringmode_error(t):
     t.lexer.skip(1)
 
 #### Initial mode
-
 @TOKEN(t_integer_literal_r)
 def t_integer_literal(t):
     # Get next token without moving lexer state
@@ -277,7 +266,6 @@ def t_integer_literal(t):
             t.value = int(t.value.lstrip("0"), 0)
         return t
     else :
-        # Print error
         error_message(t, str(t.value) + str(next_tok.value) + " is not a valid integer literal")
         sys.exit(1)
 
@@ -305,14 +293,14 @@ def t_operator(t):
     t.type = operator.get(t.value,'operator')
     return t
 
-###  Error handling
+#  Error handling
 def t_error(t):
     error_message(t, "Invalid character '" + t.value[0] + "'")
     sys.exit(1)
 
 
 ##### General Functions
-
+# Generate error message
 def error_message(token, description):
     error_str = file_name + ":" + str(token.lexer.lineno)
     error_str += ":" + str(token.lexpos - token.lexer.line_end_pos)
@@ -355,32 +343,6 @@ if __name__ == '__main__':
     # Create lexer
     lexer = lex.lex()
     lexer.line_end_pos = -1
-
-    # Test it out
-    #data = '''
-    #a lol 502 +
-    #327+
-    #(* lololol
-    #(*
-    #kerk *)
-    #" lul \\t"*)
-    #0x7
-    #"A supposedly very very long str\\
-    #ing."
-    #"Here comes (* Zorglub *)"
-    #"Uninterrupted string // Zorglub"
-    #" some thing \\b \\" bool \\r"
-    #"\\x66oo\\\\bar\v\\"N M\\"\\n"
-    #// hu 12
-    #bool
-    #someFun42
-    #a\te
-    #someFun 42
-    #0x45
-    #0xabcdef gh
-    #lol
-    #'''
-
     # Set file_name
     file_name = args.lex.split('\\')[-1:][0]
     # Give the lexer some input
@@ -400,7 +362,7 @@ if __name__ == '__main__':
             token_str += ("," + str(tok.value))
             print(token_str)
 
-        # Check for string
+        # Check for type_identifier or object_identifier or integer_literal
         elif (tok.type == "type_identifier" or tok.type == "object_identifier" or tok.type == "integer_literal"):
             token_str = str(tok.lineno) + "," + str(tok.lexpos - lexer.line_end_pos) + "," + tok.type.replace("_","-")
             token_str += ("," + str(tok.value))
