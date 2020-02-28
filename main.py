@@ -346,7 +346,7 @@ if __name__ == '__main__':
 
     # Create lexer
     lexer = lex.lex()
-    lexer.line_end_pos = 0
+    lexer.line_end_pos = -1
 
     # Test it out
     #data = '''
