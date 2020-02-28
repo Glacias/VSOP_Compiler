@@ -5,6 +5,7 @@
 # -----------------------------------------------------------------------------
 from ply.lex import TOKEN
 import argparse
+import sys
 
 keyword = [
     'and',
@@ -94,8 +95,8 @@ def t_singlelinecomment(t):
 
 #  Line numbers and positional information
 def t_newline(t):
-    r'\n+'
-    t.lexer.lineno += t.value.count("\n")
+    r'\n'
+    t.lexer.lineno += 1
     t.lexer.line_end_pos = t.lexpos
     return t
 
@@ -121,8 +122,8 @@ def t_nestedcomment(t):
 
 # Rules for the commentmode state
 def t_commentmode_newline(t):
-    r'\n+'
-    t.lexer.lineno += t.value.count("\n")
+    r'\n'
+    t.lexer.lineno += 1
     t.lexer.line_end_pos = t.lexpos
 
 def t_commentmode_lnestedcom(t):
@@ -141,9 +142,9 @@ def t_commentmode_rnestedcom(t):
 def t_commentmode_eof(t):
     error_str = file_name + ":" + str(t.lexer.comment_start_line)
     error_str += ":" + str(t.lexer.comment_start_column)
-    error_str += ": Multi-line comment is not terminated when end-of-file is reached"
+    error_str += ": lexical error: Multi-line comment is not terminated when end-of-file is reached"
     print(error_str)
-    exit(1)
+    sys.exit(1)
 
 # For bad characters, we just skip over it
 def t_commentmode_error(t):
@@ -179,7 +180,7 @@ def t_stringmode_escaped_char(t):
     # if it is the null char ==> error
     elif(t.value == '\\x00'):
         error_message(t, "Null character inside string")
-        exit(1)
+        sys.exit(1)
     # if escaped hexa char
     elif('x' in t.value):
         asciival = int(t.value[2:], 16)
@@ -191,24 +192,24 @@ def t_stringmode_escaped_char(t):
     if(t.value == '\\n'):
         t.value = '\\x0a'
         t.lexer.stringvalue += t.value
-    elif(t.value.count("\n") != 0):
-        t.lexer.lineno += t.value.count("\n")
-        t.lexer.line_end_pos = t.lexpos
+    elif("\n" in t.value):
+        t.lexer.lineno += 1
+        t.lexer.line_end_pos = t.lexpos + 1
     else:
         t.lexer.stringvalue += t.value
 
 def t_stringmode_unknown_escaped_char(t):
     r'(\\x..)|(\\.)'
     error_message(t, "Unknown escaped char \"" + t.value + "\"")
-    exit(1)
+    sys.exit(1)
 
 # For when comment is not closed
 def t_stringmode_eof(t):
     error_str = file_name + ":" + str(t.lexer.string_start_line)
     error_str += ":" + str(t.lexer.string_start_column)
-    error_str += ": String is not terminated when end-of-file is reached"
+    error_str += ": lexical error: String is not terminated when end-of-file is reached"
     print(error_str)
-    exit(1)
+    sys.exit(1)
 
 # End the string
 def t_stringmode_string_literal(t):
@@ -221,7 +222,12 @@ def t_stringmode_string_literal(t):
 def t_stringmode_newline(t):
     r'\n'
     error_message(t, "Line feed inside string without proper use of \\")
-    exit(1)
+    sys.exit(1)
+
+def t_stringmode_null_char(t):
+    r'\^@!'
+    error_message(t, "Null character inside string")
+    sys.exit(1)
 
 # Regular char
 def t_stringmode_regular_char(t):
@@ -230,7 +236,7 @@ def t_stringmode_regular_char(t):
     # If null char => error
     if(asciival == 0):
         error_message(t, "Null character inside string")
-        exit(1)
+        sys.exit(1)
     # If char printable
     if((asciival >= 32) and (asciival <= 126)):
         t.lexer.stringvalue += t.value
@@ -271,7 +277,7 @@ def t_integer_literal(t):
     else :
         # Print error
         error_message(t, str(t.value) + str(next_tok.value) + " is not a valid integer literal")
-        exit(1)
+        sys.exit(1)
 
 def t_type_identifier(t):
     r'[A-Z][a-zA-Z_0-9]*'
@@ -300,7 +306,7 @@ def t_operator(t):
 ###  Error handling
 def t_error(t):
     error_message(t, "Invalid character '" + t.value[0] + "'")
-    exit(1)
+    sys.exit(1)
 
 
 ##### General Functions
@@ -308,7 +314,7 @@ def t_error(t):
 def error_message(token, description):
     error_str = file_name + ":" + str(token.lexer.lineno)
     error_str += ":" + str(token.lexpos - token.lexer.line_end_pos)
-    error_str += ": " + description
+    error_str += ": lexical error: " + description
     print(error_str)
 
 # Get next token without moving forward
@@ -342,7 +348,7 @@ if __name__ == '__main__':
     # Check for path
     if not args.lex:
         print("Argument missing : Path to the input VSOP source code")
-        exit(1)
+        sys.exit(1)
 
     # Create lexer
     lexer = lex.lex()
