@@ -143,7 +143,7 @@ def t_commentmode_eof(t):
     error_str = file_name + ":" + str(t.lexer.comment_start_line)
     error_str += ":" + str(t.lexer.comment_start_column)
     error_str += ": lexical error: Multi-line comment is not terminated when end-of-file is reached"
-    print(error_str)
+    sys.stderr.write(error_str)
     sys.exit(1)
 
 # For bad characters, we just skip over it
@@ -208,7 +208,7 @@ def t_stringmode_eof(t):
     error_str = file_name + ":" + str(t.lexer.string_start_line)
     error_str += ":" + str(t.lexer.string_start_column)
     error_str += ": lexical error: String is not terminated when end-of-file is reached"
-    print(error_str)
+    sys.stderr.write(error_str)
     sys.exit(1)
 
 # End the string
@@ -315,7 +315,7 @@ def error_message(token, description):
     error_str = file_name + ":" + str(token.lexer.lineno)
     error_str += ":" + str(token.lexpos - token.lexer.line_end_pos)
     error_str += ": lexical error: " + description
-    print(error_str)
+    sys.stderr.write(error_str)
 
 # Get next token without moving forward
 def get_next_token(token):
@@ -347,7 +347,7 @@ if __name__ == '__main__':
 
     # Check for path
     if not args.lex:
-        print("Argument missing : Path to the input VSOP source code")
+        sys.stderr.write("Argument missing : Path to the input VSOP source code")
         sys.exit(1)
 
     # Create lexer
