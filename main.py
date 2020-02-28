@@ -36,7 +36,7 @@ operator = {
     ')' : 'rpar',
     ':' : 'colon',
     ';' : 'semicolon',
-    ',' : 'coma',
+    ',' : 'comma',
     '+' : 'plus',
     '-' : 'minus',
     '*' : 'times',
