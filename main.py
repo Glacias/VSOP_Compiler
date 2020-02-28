@@ -115,8 +115,8 @@ states = (
 # Match the first (*. Enter commentmode state.
 def t_nestedcomment(t):
     r'\(\*'
-    t.lexer.comment_start_line = t.lexer.lineno   # Record the starting position
-    t.lexer.comment_start_column = t.lexpos - t.lexer.line_end_pos
+    t.lexer.comment_start_line = [t.lexer.lineno]   # Record the starting position
+    t.lexer.comment_start_column = [(t.lexpos - t.lexer.line_end_pos)]
     t.lexer.level = 1                             # Initial level
     t.lexer.begin('commentmode')                  # Enter 'commentmode' state
 
@@ -128,6 +128,8 @@ def t_commentmode_newline(t):
 
 def t_commentmode_lnestedcom(t):
     r'\(\*'
+    t.lexer.comment_start_line.append(t.lexer.lineno)
+    t.lexer.comment_start_column.append(t.lexpos - t.lexer.line_end_pos)
     t.lexer.level +=1
 
 def t_commentmode_rnestedcom(t):
@@ -140,9 +142,9 @@ def t_commentmode_rnestedcom(t):
 
 # For when comment is not closed
 def t_commentmode_eof(t):
-    error_str = file_name + ":" + str(t.lexer.comment_start_line)
-    error_str += ":" + str(t.lexer.comment_start_column)
-    error_str += ": lexical error: Multi-line comment is not terminated when end-of-file is reached"
+    error_str = file_name + ":" + str(t.lexer.comment_start_line.pop(t.lexer.level-1))
+    error_str += ":" + str(t.lexer.comment_start_column.pop(t.lexer.level-1))
+    error_str += ": lexical error\n  Nested comment is not terminated when end-of-file is reached\n"
     sys.stderr.write(error_str)
     sys.exit(1)
 
@@ -207,7 +209,7 @@ def t_stringmode_unknown_escaped_char(t):
 def t_stringmode_eof(t):
     error_str = file_name + ":" + str(t.lexer.string_start_line)
     error_str += ":" + str(t.lexer.string_start_column)
-    error_str += ": lexical error: String is not terminated when end-of-file is reached"
+    error_str += ": lexical error\n  String is not terminated when end-of-file is reached\n"
     sys.stderr.write(error_str)
     sys.exit(1)
 
@@ -314,7 +316,7 @@ def t_error(t):
 def error_message(token, description):
     error_str = file_name + ":" + str(token.lexer.lineno)
     error_str += ":" + str(token.lexpos - token.lexer.line_end_pos)
-    error_str += ": lexical error: " + description
+    error_str += ": lexical error\n  " + description + "\n"
     sys.stderr.write(error_str)
 
 # Get next token without moving forward
@@ -347,7 +349,7 @@ if __name__ == '__main__':
 
     # Check for path
     if not args.lex:
-        sys.stderr.write("Argument missing : Path to the input VSOP source code")
+        sys.stderr.write("Argument missing : Path to the input VSOP source code\n")
         sys.exit(1)
 
     # Create lexer
@@ -381,11 +383,6 @@ if __name__ == '__main__':
 
     # Set file_name
     file_name = args.lex.split('\\')[-1:][0]
-    if ".vsop" in file_name :
-        file_name = file_name[:-5]
-    else:
-        print("Not a vsop file")
-
     # Give the lexer some input
     f = open(args.lex, "r")
     data = f.read()
