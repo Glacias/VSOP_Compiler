@@ -46,7 +46,7 @@ operator = {
     '=' : 'equal',
     '<' : 'lower',
     '<=' : 'lower_equal',
-    '<-' : 'asign',
+    '<-' : 'assign',
 }
 
 # List of token names + keyword
