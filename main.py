@@ -373,3 +373,26 @@ if __name__ == '__main__':
             token_str = str(tok.lineno) + "," + str(tok.lexpos - lexer.line_end_pos) + "," + tok.type.replace("_","-")
             #token_str += ("," + str(tok.value))
             print(token_str)
+
+
+###### Parser
+
+## Classes for AST
+
+# General class node
+class Node:
+    pass
+
+# Program
+class Program(Node):
+    def __init__(self, list_class):
+        self.list_class = list_class
+
+    def __str__(self):
+        str = "test"
+        return str
+
+# Class
+class Class:
+    def __init__(self, name, parent, fields, methods):
+        self.name = name
