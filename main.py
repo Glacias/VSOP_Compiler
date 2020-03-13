@@ -54,13 +54,9 @@ operator = {
 
 # List of token names + keyword
 tokens = [
-    'lowercase_letter',
-    'uppercase_letter',
-    'letter',
     'bin_digit',
     'digit',
     'hex_digit',
-    'integer_literal_r',
     'integer_literal',
     'whitespace',
     'newline',
@@ -73,11 +69,9 @@ tokens = [
     'test'] + keyword + list(operator.values())
 
 ###  Tokens
-# Numbers
 t_bin_digit = r'[0-1]';
 t_digit = r'(' + t_bin_digit + r'|' + r'[2-9]' + r')'
 t_hex_digit = r'(' + t_digit + r'|' + r'[a-f]' + r'|' + r'[A-F]' + r')'
-t_integer_literal_r = r'(' + r'(' + r'0x' + r'(' + t_hex_digit + r'+' + r')' + r')' + r'|' + r'(' + t_digit + r'+' + r')' + r')'
 
 # Single line comment
 def t_singlelinecomment(t):
@@ -89,11 +83,9 @@ def t_newline(t):
     r'\n'
     t.lexer.lineno += 1
     t.lexer.line_end_pos = t.lexpos
-    return t
 
 def t_whitespace(t):
     r'[ \t\r\f]'
-    return t
 
 #####  Additionnal mode
 # Declare the states/modes of the lexer
@@ -134,7 +126,7 @@ def t_commentmode_rnestedcom(t):
 def t_commentmode_eof(t):
     error_str = file_name + ":" + str(t.lexer.comment_start_line.pop(t.lexer.level-1))
     error_str += ":" + str(t.lexer.comment_start_column.pop(t.lexer.level-1))
-    error_str += ": lexical error\n  Nested comment is not terminated when end-of-file is reached\n"
+    error_str += ": lexical error\n  Nested comment is not terminated when end-of-file is reached.\n"
     sys.stderr.write(error_str)
     sys.exit(1)
 
@@ -171,7 +163,7 @@ def t_stringmode_escaped_char(t):
         t.value = '\\x0d'
     # if it is the null char ==> error
     elif(t.value == '\\x00'):
-        error_message(t, "Null character inside string")
+        error_message(t, "Null character inside string.")
         sys.exit(1)
     # if escaped hexa char
     elif('x' in t.value):
@@ -192,14 +184,14 @@ def t_stringmode_escaped_char(t):
 
 def t_stringmode_unknown_escaped_char(t):
     r'(\\x..)|(\\.)'
-    error_message(t, "Unknown escaped char \"" + t.value + "\"")
+    error_message(t, "Unknown escaped char \"" + t.value + "\".")
     sys.exit(1)
 
 # For when comment is not closed
 def t_stringmode_eof(t):
     error_str = file_name + ":" + str(t.lexer.string_start_line)
     error_str += ":" + str(t.lexer.string_start_column)
-    error_str += ": lexical error\n  String is not terminated when end-of-file is reached\n"
+    error_str += ": lexical error\n  String is not terminated when end-of-file is reached.\n"
     sys.stderr.write(error_str)
     sys.exit(1)
 
@@ -213,12 +205,12 @@ def t_stringmode_string_literal(t):
 # Newline
 def t_stringmode_newline(t):
     r'\n'
-    error_message(t, "Line feed inside string without proper use of \\")
+    error_message(t, "Line feed inside string without proper use of \\.")
     sys.exit(1)
 
 def t_stringmode_null_char(t):
     r'\^@!'
-    error_message(t, "Null character inside string")
+    error_message(t, "Null character inside string.")
     sys.exit(1)
 
 # Regular char
@@ -227,7 +219,7 @@ def t_stringmode_regular_char(t):
     asciival = ord(t.value)
     # If null char => error
     if(asciival == 0):
-        error_message(t, "Null character inside string")
+        error_message(t, "Null character inside string.")
         sys.exit(1)
     # If char printable
     if((asciival >= 32) and (asciival <= 126)):
@@ -245,29 +237,37 @@ def t_stringmode_error(t):
     t.lexer.skip(1)
 
 #### Initial mode
-@TOKEN(t_integer_literal_r)
-def t_integer_literal(t):
-    # Get next token without moving lexer state
-    next_tok = get_next_token(t)
-    # Checking for eof
-    if not next_tok:
-        return t
 
-    # Checking for next token to be whitespace or operator
-    if not (next_tok.type in (["type_identifier", "object_identifier"])) :
-        # If 0
-        if (t.value == "0"):
-            t.value = int(0)
-        # If hexa
-        elif("x" in t.value):
-            t.value = int(t.value, 0)
-        # If number remove leading 0
-        else:
-            t.value = int(t.value.lstrip("0"), 0)
-        return t
-    else :
-        error_message(t, str(t.value) + str(next_tok.value) + " is not a valid integer literal")
-        sys.exit(1)
+# Detect error in integer_literal (except incomplete integer_literal "0x")
+def t_integer_literal_err(t):
+    r'(?!0x)[0-9]+[a-zA-Z_][0-9a-zA-Z_]*|0x[0-9a-fA-F]+[g-zG-Z_][0-9a-zA-Z_]*'
+    error_message(t, str(t.value) + " is not a valid integer literal.")
+    sys.exit(1)
+
+# Detect integer_literal
+def t_integer_literal(t):
+    r'(0x([0-9a-fA-F]+)|[0-9]+)[^a-zA-Z_]'
+
+    # Go back one caracter
+    t.lexer.lexpos = t.lexer.lexpos - 1
+    t.value = t.value[:-1]
+
+    # If value is 0
+    if (t.value == "0"):
+        t.value = int(0)
+    # If hexa
+    elif("x" in t.value):
+        t.value = int(t.value, 0)
+    # If number remove leading 0
+    else:
+        t.value = int(t.value.lstrip("0"), 0)
+    return t
+
+# Detect incomplete hex number "0x"
+def t_integer_literal_incomplete(t):
+    r'0x'
+    error_message(t, str(t.value) + " is not a valid integer literal.")
+    sys.exit(1)
 
 def t_type_identifier(t):
     r'[A-Z][a-zA-Z_0-9]*'
@@ -295,9 +295,8 @@ def t_operator(t):
 
 #  Error handling
 def t_error(t):
-    error_message(t, "Invalid character '" + t.value[0] + "'")
+    error_message(t, "Invalid character \'" + t.value[0] + "\'.")
     sys.exit(1)
-
 
 ##### General Functions
 # Generate error message
@@ -307,37 +306,19 @@ def error_message(token, description):
     error_str += ": lexical error\n  " + description + "\n"
     sys.stderr.write(error_str)
 
-# Get next token without moving forward
-def get_next_token(token):
-    # Save all variables from lexer
-    saved_lexpos = token.lexer.lexpos
-    saved_lineno = token.lexer.lineno
-    saved_end_pos = token.lexer.line_end_pos
-
-    # Get next token
-    next_token = token.lexer.token()
-
-    # Restore variables
-    token.lexer.lexpos = saved_lexpos
-    token.lexer.lineno = saved_lineno
-    token.lexer.line_end_pos = saved_end_pos
-
-    return next_token
-
-
 ##### Build the lexer
 import ply.lex as lex
 global file_name
 
 if __name__ == '__main__':
     # Parsing arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-lex', help='Path to the input VSOP source code')
-    args = parser.parse_args()
+    parser_arg = argparse.ArgumentParser()
+    parser_arg.add_argument('-lex', help='Path to the input VSOP source code')
+    args = parser_arg.parse_args()
 
     # Check for path
     if not args.lex:
-        sys.stderr.write("Argument missing : Path to the input VSOP source code\n")
+        sys.stderr.write("Argument missing : Path to the input VSOP source code.\n")
         sys.exit(1)
 
     # Create lexer
@@ -356,6 +337,7 @@ if __name__ == '__main__':
         if not tok:
             break     # No more input
 
+        ## Print the tokens
         # Check for string
         if (tok.type == "string_literal"):
             token_str = str(lexer.string_start_line) + "," + str(lexer.string_start_column) + "," + tok.type.replace("_","-")
@@ -367,17 +349,22 @@ if __name__ == '__main__':
             token_str = str(tok.lineno) + "," + str(tok.lexpos - lexer.line_end_pos) + "," + tok.type.replace("_","-")
             token_str += ("," + str(tok.value))
             print(token_str)
-
-        # Ignore whitespace and newline
-        elif not (tok.type == "whitespace" or tok.type == "newline") :
+        # Rest of tokens
+        else:
             token_str = str(tok.lineno) + "," + str(tok.lexpos - lexer.line_end_pos) + "," + tok.type.replace("_","-")
-            #token_str += ("," + str(tok.value))
             print(token_str)
 
 
 ###### Parser
+import ply.yacc as yacc
 
-## Classes for AST
+### Rules for parsing
+def p_program(p):
+    'program : integer_literal'
+    p[0] = p[1]
+
+
+### Classes for AST
 
 # General class node
 class Node:
@@ -393,6 +380,9 @@ class Program(Node):
         return str
 
 # Class
-class Class:
+class Class(Node):
     def __init__(self, name, parent, fields, methods):
         self.name = name
+
+#parser = yacc.yacc()
+#parser.parse(data)
