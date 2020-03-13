@@ -54,9 +54,6 @@ operator = {
 
 # List of token names + keyword
 tokens = [
-    'bin_digit',
-    'digit',
-    'hex_digit',
     'integer_literal',
     'whitespace',
     'newline',
@@ -69,10 +66,6 @@ tokens = [
     'test'] + keyword + list(operator.values())
 
 ###  Tokens
-t_bin_digit = r'[0-1]';
-t_digit = r'(' + t_bin_digit + r'|' + r'[2-9]' + r')'
-t_hex_digit = r'(' + t_digit + r'|' + r'[a-f]' + r'|' + r'[A-F]' + r')'
-
 # Single line comment
 def t_singlelinecomment(t):
     r'//.*'
@@ -142,10 +135,11 @@ def t_stringstart(t):
     t.lexer.stringvalue = "\""
     t.lexer.begin('stringmode')
 
-t_stringmode_escaped_char_r = r'\\' + r'(' + r'b|t|n|r|\"|\\|(x' + t_hex_digit + t_hex_digit + r')|' + r'\n[ \t]*' + r')'
+#t_stringmode_escaped_char_r = r'\\' + r'(' + r'b|t|n|r|\"|\\|(x' + r'[0-9a-fA-F]' + r'[0-9a-fA-F]' + r')|' + r'\n[ \t]*' + r')'
 
-@TOKEN(t_stringmode_escaped_char_r)
+#@TOKEN(t_stringmode_escaped_char_r)
 def t_stringmode_escaped_char(t):
+    r'\\(b|t|n|r|\"|\\|(x[0-9a-fA-F][0-9a-fA-F])|\n[ \t]*)'
     # \" => \x22
     if(t.value == '\\"'):
         t.value = '\\x22'
@@ -246,15 +240,15 @@ def t_integer_literal_err(t):
 
 # Detect integer_literal
 def t_integer_literal(t):
-    r'(0x([0-9a-fA-F]+)|[0-9]+)[^a-zA-Z_]'
-
-    # Go back one caracter
-    t.lexer.lexpos = t.lexer.lexpos - 1
-    t.value = t.value[:-1]
+    r'(0x([0-9a-fA-F]+)|0x|[0-9]+)'
 
     # If value is 0
     if (t.value == "0"):
         t.value = int(0)
+    # If empty integer_literal "0x"
+    elif(t.value == "0x"):
+        error_message(t, str(t.value) + " is not a valid integer literal.")
+        sys.exit(1)
     # If hexa
     elif("x" in t.value):
         t.value = int(t.value, 0)
@@ -262,12 +256,6 @@ def t_integer_literal(t):
     else:
         t.value = int(t.value.lstrip("0"), 0)
     return t
-
-# Detect incomplete hex number "0x"
-def t_integer_literal_incomplete(t):
-    r'0x'
-    error_message(t, str(t.value) + " is not a valid integer literal.")
-    sys.exit(1)
 
 def t_type_identifier(t):
     r'[A-Z][a-zA-Z_0-9]*'
@@ -356,12 +344,15 @@ if __name__ == '__main__':
 
 
 ###### Parser
-import ply.yacc as yacc
-
 ### Rules for parsing
 def p_program(p):
-    'program : integer_literal'
-    p[0] = p[1]
+    '''program : integer_literal
+               | program integer_literal'''
+    if (len(p)==2):
+        p[0] = Program([p[1]])
+    else:
+        print(p[1].list_class)
+        #p[0] = Program(p[1].list_class.append(p[2]))
 
 
 ### Classes for AST
@@ -376,7 +367,11 @@ class Program(Node):
         self.list_class = list_class
 
     def __str__(self):
-        str = "test"
+        str = '['
+        for cl in self.list_class:
+            str += cl.__str__() + ','
+        str = str[:-1]
+        str += ']'
         return str
 
 # Class
@@ -384,5 +379,8 @@ class Class(Node):
     def __init__(self, name, parent, fields, methods):
         self.name = name
 
-#parser = yacc.yacc()
-#parser.parse(data)
+### Parse
+import ply.yacc as yacc
+parser = yacc.yacc()
+out = parser.parse(data)
+print(out)
