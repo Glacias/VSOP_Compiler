@@ -1,0 +1,3 @@
+class Lol { }
+
+class King extends Lol { 12 a 45}
