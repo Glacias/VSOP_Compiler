@@ -6,7 +6,6 @@
 # -----------------------------------------------------------------------------
 import argparse
 import sys
-import importlib
 
 # For the lexer
 exec(open("lexer.py").read())
