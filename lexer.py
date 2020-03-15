@@ -57,15 +57,9 @@ class MyLexer(object):
     # List of token names + keyword
     tokens = [
         'integer_literal',
-        'whitespace',
-        'newline',
         'type_identifier',
         'object_identifier',
-        'operator',
-        'string_literal',
-        'escape_char',
-        'escaped_char_r',
-        'test'] + keyword + list(operator.values())
+        'string_literal'] + keyword + list(operator.values())
 
     ###  Tokens
     # Single line comment

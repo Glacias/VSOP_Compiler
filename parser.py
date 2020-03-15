@@ -10,11 +10,28 @@ import ply.yacc as yacc
 import sys
 
 class MyParser(object):
+    # Precedence and associativity rules
+    precedence = (
+    ('right', 'assign'),
+    ('left', 'and'),
+    ('right', 'not'),
+    ('nonassoc', 'lower', 'lower_equal', 'equal'),
+    ('left', 'plus', 'minus'),
+    ('left', 'times', 'div'),
+    ('right', 'uminus', 'isnull'),
+    ('right', 'pow'),
+    ('left', 'dot'),
+    )
+
     def __init__(self, lexer):
         self.tokens = lexer.tokens
         self.keyword = lexer.keyword
         self.operator = lexer.operator
         self.ast_root = Program()
+
+    # Build the parser
+    def build(self, **kwargs):
+        self.parser = yacc.yacc(module=self, **kwargs)
 
     ### Rules for parsing
     def p_Program(self, p):
@@ -27,10 +44,9 @@ class MyParser(object):
         p[0] = self.ast_root
 
     def p_Class_body(self, p):
-        # To change
         '''Class_body :
-                      | Class_body Test
-                      | Class_body object_identifier'''
+                      | Class_body Field
+                      | Class_body Method'''
         if(len(p)==1):
             p[0] = Class()
         else:
@@ -103,11 +119,58 @@ class MyParser(object):
             p[0] = p[1]
             p[0].add_expr(p[3])
 
-    # TO CHANGE
-    def p_Expr(self, p):
+    ## Expressions
+    def p_Expr_If_then(self, p):
+        '''Expr : if Expr then Expr else Expr
+                | if Expr then Expr'''
+        if(len(p)==7):
+            p[0] = Expr_if(p[2], p[4])
+            p[0].add_else_expr(p[6])
+        else:
+            p[0] = Expr_if(p[2], p[4])
+
+    def p_Expr_while(self, p):
+        'Expr : while Expr do Expr'
+        p[0] = Expr_while(p[2], p[4])
+
+    def p_Expr_let(self, p):
+        '''Expr : let object_identifier colon Type in Expr
+                | let object_identifier colon Type assign Expr in Expr'''
+        if(len(p)==8):
+            p[0] = Expr_let(p[2], p[4], p[6])
+        else:
+            p[0] = Expr_let(p[2], p[4], p[8])
+            p[0].add_init_expr(p[6])
+
+    def p_Expr_assign(self, p):
+        'Expr : object_identifier assign Expr'
+        p[0] = Expr_assign(p[1], p[3])
+
+    def p_Expr_uminus(self, p):
+        'Expr : minus Expr %prec uminus'
+        p[0] = Expr_UnOp(p[1], p[2])
+
+    def p_Expr_UnOp(self, p):
+        '''Expr : not Expr
+                | isnull Expr'''
+        p[0] = Expr_UnOp(p[1], p[2])
+
+    def p_Expr_BinOp(self, p):
+        '''Expr : Expr equal Expr
+                | Expr lower Expr
+                | Expr lower_equal Expr
+                | Expr plus Expr
+                | Expr minus Expr
+                | Expr times Expr
+                | Expr div Expr
+                | Expr pow Expr'''
+        p[0] = Expr_BinOp(p[2], p[1], p[3])
+
+    def p_Expr_literal(self, p):
         '''Expr : Literal'''
         p[0] = p[1]
 
+    # Literal
     def p_Literal(self, p):
         '''Literal : integer_literal
                    | string_literal
@@ -122,21 +185,20 @@ class MyParser(object):
         else:
             p[0] = Boolean_literal(False)
 
-    def p_Test(self, p):
-        '''Test : integer_literal
-                | Test integer_literal'''
-        if(len(p)==2):
-            p.test = Test([p[1]])
-        else:
-            p.test.add_class(p[2])
-        p[0] = p.test
+    #def p_Test(self, p):
+    #    '''Test : integer_literal
+    #            | Test integer_literal'''
+    #    if(len(p)==2):
+    #        p.test = Test([p[1]])
+    #    else:
+    #        p.test.add_class(p[2])
+    #    p[0] = p.test
 
     def p_error(self, t):
         print("Syntax error at '%s'" % t.value)
 
-    # Build the parser
-    def build(self, **kwargs):
-        self.parser = yacc.yacc(module=self, **kwargs)
+
+
 
 ##### Classes for AST
 # General class node
@@ -166,10 +228,10 @@ class Class(Node):
 
     # Print the class
     def __str__(self):
-        str = "Class(" + self.name + ", " + self.parent + ", \n\t"
-        str += get_list_string(self.fields) + ", \n\t"
+        str = "\nClass(" + self.name + ", " + self.parent + ", "
+        str += get_list_string(self.fields) + ", "
         str += get_list_string(self.methods)
-        str += ")\n"
+        str += ")"
         return str
 
     # Name the class
@@ -196,10 +258,10 @@ class Field(Node):
         self.init_expr = ""
 
     def __str__(self):
-        str = "Field(" + self.name + ", " + self.type.__str__()
-        if(self.init_expr != ""):
-            str += ", " + self.init_expr.__str__()
-        str += ")"
+        if(self.init_expr==""):
+            str = get_obejct_string("Field", [self.name, self.type])
+        else:
+            str = get_obejct_string("Field", [self.name, self.type, self.init_expr])
         return str
 
     # Add init expr
@@ -214,9 +276,7 @@ class Method(Node):
         self.block = block
 
     def __str__(self):
-        str = "Method(" + self.name + ", " + self.formals.__str__()
-        str += ", " + self.ret_type.__str__()
-        str += ", " + self.block.__str__() + ')'
+        str = get_obejct_string("Method", [self.formals, self.ret_type, self.block])
         return str
 
 class Type(Node):
@@ -260,6 +320,75 @@ class Block(Node):
     def add_expr(self, expr):
         self.list_expr.append(expr)
 
+## Expressions
+class Expr(Node):
+    pass
+
+class Expr_if(Expr):
+    def __init__(self, cond_expr, then_expr):
+        self.cond_expr = cond_expr
+        self.then_expr = then_expr
+        self.else_expr = ""
+
+    def __str__(self):
+        if(self.else_expr==""):
+            str = get_obejct_string("If", [self.cond_expr, self.then_expr])
+        else:
+            str = get_obejct_string("If", [self.cond_expr, self.then_expr, self.else_expr])
+        return str
+
+    def add_else_expr(self, expr):
+        self.else_expr = expr
+
+class Expr_while(Expr):
+    def __init__(self, cond_expr, body_expr):
+        self.cond_expr = cond_expr
+        self.body_expr = body_expr
+
+    def __str__(self):
+        return get_obejct_string("While", [self.cond_expr, self.body_expr])
+
+class Expr_let(Expr):
+    def __init__(self, name, type, scope_expr):
+        self.name = name
+        self.type = type
+        self.init_expr = ""
+        self.scope_expr = scope_expr
+
+    def __str__(self):
+        if(self.init_expr==""):
+            str = get_obejct_string("Let", [self.name, self.type, self.scope_expr])
+        else:
+            str = get_obejct_string("Let", [self.name, self.type, self.init_expr, self.scope_expr])
+        return str
+
+    # Add init expr
+    def add_init_expr(self, init_expr):
+        self.init_expr = init_expr
+
+class Expr_assign(Expr):
+    def __init__(self, name, expr):
+        self.name = name
+        self.expr = expr
+    def __str__(self):
+        return get_obejct_string("Assign", [self.name, self.expr])
+
+class Expr_UnOp(Expr):
+    def __init__(self, unop, expr):
+        self.unop = unop
+        self.expr = expr
+    def __str__(self):
+        return get_obejct_string("UnOp", [self.unop, self.expr])
+
+class Expr_BinOp(Expr):
+    def __init__(self, op, left_expr, right_expr):
+        self.op = op
+        self.left_expr = left_expr
+        self.right_expr = right_expr
+    def __str__(self):
+        return get_obejct_string("BinOp", [self.op, self.left_expr, self.right_expr])
+
+#Literal
 class Literal(Node):
     def __init__(self, literal):
         self.literal = literal
@@ -298,4 +427,14 @@ def get_list_string(list):
         str += el.__str__() + ','
     str = str[:-1]
     str += ']'
+    return str
+
+# Generate the string of an object (Ex : If(1, 2))
+def get_obejct_string(name, list):
+    str = name + "("
+    if(len(list)==0):
+        return str + ")"
+    for el in list:
+        str += el.__str__() + ", "
+    str = str[:-2] + ")"
     return str
