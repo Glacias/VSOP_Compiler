@@ -156,7 +156,8 @@ class MyParser(object):
         p[0] = Expr_UnOp(p[1], p[2])
 
     def p_Expr_BinOp(self, p):
-        '''Expr : Expr equal Expr
+        '''Expr : Expr and Expr
+                | Expr equal Expr
                 | Expr lower Expr
                 | Expr lower_equal Expr
                 | Expr plus Expr
@@ -166,9 +167,47 @@ class MyParser(object):
                 | Expr pow Expr'''
         p[0] = Expr_BinOp(p[2], p[1], p[3])
 
+    def p_Expr_Call(self, p):
+        '''Expr : object_identifier lpar Args rpar
+                | Expr dot object_identifier lpar Args rpar'''
+        if(len(p)==5):
+            p[0] = Expr_Call(p[1], p[3])
+        else:
+            p[0] = Expr_Call(p[3], p[5])
+            p[0].add_object_expr(p[1])
+
+    def p_Expr_New(self, p):
+        'Expr : new type_identifier'
+        p[0] = Expr_New(p[2])
+
+    def p_Expr_Object_id(self, p):
+        'Expr : object_identifier'
+        p[0] = Expr_Object_identifier(p[1])
+
     def p_Expr_literal(self, p):
-        '''Expr : Literal'''
+        'Expr : Literal'
         p[0] = p[1]
+
+    def p_Expr_Unit(self, p):
+        'Expr : lpar rpar'
+        p[0] = Expr_Unit()
+
+    def p_Expr_Par_expr(self, p):
+        'Expr : lpar Expr rpar'
+        p[0] = p[2]
+
+    def p_Args(self, p):
+        '''Args :
+                | Expr
+                | Args comma Expr'''
+        if(len(p)==1):
+            p[0] = Args()
+        elif(len(p)==2):
+            p[0] = Args()
+            p[0].add_arg(p[1])
+        else:
+            p[0] = p[1]
+            p[0].add_arg(p[3])
 
     # Literal
     def p_Literal(self, p):
@@ -291,7 +330,7 @@ class Formals(Node):
         self.list_formals = []
 
     def __str__(self):
-        str = get_list_string(formals)
+        str = get_list_string(self.list_formals)
         return str
 
     def add_formal(self, formal):
@@ -311,10 +350,10 @@ class Block(Node):
         self.list_expr = []
 
     def __str__(self):
-        if(len(self.list_exp)==1):
-            str = self.list_exp[0].__str__()
+        if(len(self.list_expr)==1):
+            str = self.list_expr[0].__str__()
         else:
-            str = get_list_string(self.list_exp)
+            str = get_list_string(self.list_expr)
         return str
 
     def add_expr(self, expr):
@@ -388,7 +427,42 @@ class Expr_BinOp(Expr):
     def __str__(self):
         return get_obejct_string("BinOp", [self.op, self.left_expr, self.right_expr])
 
-#Literal
+class Expr_Call(Expr):
+    def __init__(self, method_name, expr_list):
+        self.object_expr = "self"
+        self.method_name = method_name
+        self.expr_list = expr_list
+    def __str__(self):
+        return get_obejct_string("Call", [self.object_expr, self.method_name, self.expr_list])
+    def add_object_expr(self, expr):
+        self.object_expr = expr
+
+class Expr_Object_identifier(Expr):
+    def __init__(self, name):
+        self.name = name
+    def __str__(self):
+        return self.name.__str__()
+
+class Expr_New(Expr):
+    def __init__(self, type_name):
+        self.type_name = type_name
+    def __str__(self):
+        return self.type_name.__str__()
+
+class Expr_Unit(Expr):
+    def __init__(self):
+        self.unit = "()"
+    def __str__(self):
+        return self.unit.__str__()
+
+class Args(Node):
+    def __init__(self):
+        self.list_args = []
+    def __str__(self):
+        return get_list_string(self.list_args)
+    def add_arg(self, arg):
+        self.list_args.append(arg)
+
 class Literal(Node):
     def __init__(self, literal):
         self.literal = literal
@@ -424,8 +498,8 @@ def get_list_string(list):
         return "[]"
     str = '['
     for el in list:
-        str += el.__str__() + ','
-    str = str[:-1]
+        str += el.__str__() + ', '
+    str = str[:-2]
     str += ']'
     return str
 
