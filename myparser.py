@@ -26,12 +26,13 @@ class MyParser(object):
     )
 
     # Init
-    def __init__(self, lexer, file_name):
+    def __init__(self, lexer, file):
         self.tokens = lexer.tokens
         self.keyword = lexer.keyword
         self.operator = lexer.operator
         self.ast_root = Program()
-        self.file_name = file_name
+        global file_name
+        file_name = file
 
     # Build the parser
     def build(self, **kwargs):
@@ -241,8 +242,9 @@ class MyParser(object):
     #        p.test.add_class(p[2])
     #    p[0] = p.test
 
-    def p_error(self, t):
-        print("Syntax error at '%s'" % t.value)
+    def p_error(self, p):
+        error_message(p, "An error occured while parsing the following token : " + str(p.value))
+        sys.exit(1)
 
 
 
@@ -520,3 +522,10 @@ def get_obejct_string(name, list):
         str += el.__str__() + ", "
     str = str[:-2] + ")"
     return str
+
+# Generate error message
+def error_message(token, description):
+    error_str = file_name + ":" + str(token.lexer.lineno)
+    error_str += ":" + str(token.lexpos - token.lexer.line_end_pos)
+    error_str += ": syntax error.\n  " + description + "\n"
+    sys.stderr.write(error_str)
