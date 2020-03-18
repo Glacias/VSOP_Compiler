@@ -455,7 +455,7 @@ class Expr_New(Expr):
     def __init__(self, type_name):
         self.type_name = type_name
     def __str__(self):
-        return self.type_name.__str__()
+        return get_obejct_string("New", [self.type_name])
 
 class Expr_Unit(Expr):
     def __init__(self):
