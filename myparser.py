@@ -12,6 +12,8 @@ import sys
 class MyParser(object):
     # Precedence and associativity rules
     precedence = (
+    ('nonassoc', 'if_then', 'let_prec'),
+    ('nonassoc', 'else', 'while_prec', 'let_prec_assign'),
     ('right', 'assign'),
     ('left', 'and'),
     ('right', 'not'),
@@ -123,8 +125,8 @@ class MyParser(object):
 
     ## Expressions
     def p_Expr_If_then(self, p):
-        '''Expr : if Expr then Expr else Expr
-                | if Expr then Expr'''
+        '''Expr : if Expr then Expr %prec if_then
+                | if Expr then Expr else Expr'''
         if(len(p)==7):
             p[0] = Expr_if(p[2], p[4])
             p[0].add_else_expr(p[6])
@@ -132,13 +134,13 @@ class MyParser(object):
             p[0] = Expr_if(p[2], p[4])
 
     def p_Expr_while(self, p):
-        'Expr : while Expr do Expr'
+        'Expr : while Expr do Expr %prec while_prec'
         p[0] = Expr_while(p[2], p[4])
 
     def p_Expr_let(self, p):
-        '''Expr : let object_identifier colon Type in Expr
-                | let object_identifier colon Type assign Expr in Expr'''
-        if(len(p)==8):
+        '''Expr : let object_identifier colon Type in Expr %prec let_prec
+                | let object_identifier colon Type assign Expr in Expr %prec let_prec_assign'''
+        if(len(p)==7):
             p[0] = Expr_let(p[2], p[4], p[6])
         else:
             p[0] = Expr_let(p[2], p[4], p[8])
@@ -197,6 +199,10 @@ class MyParser(object):
     def p_Expr_Par_expr(self, p):
         'Expr : lpar Expr rpar'
         p[0] = p[2]
+
+    def p_Expr_block(self,p):
+        'Expr : Block'
+        p[0] = p[1]
 
     def p_Args(self, p):
         '''Args :

@@ -1,8 +1,4 @@
-//stop
-class Test {
-    field1 : int32 <- 0;
-    field2 : bool;
-
-    method1() : int32 { 0 }
-    method2(b : bool) : bool { b }
+// Valid comment
+class T {
+    field : int32 <- let x : int32 in x * x; // x uninitialized here!
 }
