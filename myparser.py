@@ -27,6 +27,7 @@ class MyParser(object):
 
     # Init
     def __init__(self, lexer, file):
+        self.lex = lexer
         self.tokens = lexer.tokens
         self.keyword = lexer.keyword
         self.operator = lexer.operator
@@ -243,7 +244,14 @@ class MyParser(object):
     #    p[0] = p.test
 
     def p_error(self, p):
-        error_message(p, "An error occured while parsing the following token : " + str(p.value))
+        if not p:
+            error_str = file_name + ":" + str(self.lex.lexer.lineno)
+            error_str += ":" + str(self.lex.lexer.lexpos - self.lex.lexer.line_end_pos-1)
+            error_str += ": syntax error.\n  "
+            error_str += "The parser reached the end of file and detected an error, this is probably due to a missing brace\n"
+            sys.stderr.write(error_str)
+        else:
+            error_message(p, "An error occured while parsing the following token : " + str(p.value))
         sys.exit(1)
 
 
