@@ -267,7 +267,7 @@ class Class(Node):
 
     # Print the class
     def __str__(self):
-        str = "\nClass(" + self.name + ", " + self.parent + ", "
+        str = "Class(" + self.name + ", " + self.parent + ", "
         str += get_list_string(self.fields) + ", "
         str += get_list_string(self.methods)
         str += ")"
