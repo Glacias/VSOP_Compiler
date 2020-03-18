@@ -23,11 +23,13 @@ class MyParser(object):
     ('left', 'dot'),
     )
 
-    def __init__(self, lexer):
+    # Init
+    def __init__(self, lexer, file_name):
         self.tokens = lexer.tokens
         self.keyword = lexer.keyword
         self.operator = lexer.operator
         self.ast_root = Program()
+        self.file_name = file_name
 
     # Build the parser
     def build(self, **kwargs):

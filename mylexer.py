@@ -61,6 +61,11 @@ class MyLexer(object):
         'object_identifier',
         'string_literal'] + keyword + list(operator.values())
 
+    # Init
+    def __init__(self, file):
+        global file_name
+        file_name = file
+
     ###  Tokens
     # Single line comment
     def t_singlelinecomment(self, t):

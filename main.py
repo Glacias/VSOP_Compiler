@@ -9,13 +9,6 @@ import sys
 from mylexer import *
 from myparser import *
 
-# For the lexer
-#exec(open("lexer.py").read())
-global file_name
-
-# For the parser
-#exec(open("parser.py").read())
-
 if __name__ == '__main__':
     # Parsing arguments
     parser_arg = argparse.ArgumentParser()
@@ -25,13 +18,12 @@ if __name__ == '__main__':
 
     # Check for path
     if args.lex:
-        # Create lexer
-        mylex = MyLexer()
-        mylex.build() # Build the lexer
-        mylex.lexer.line_end_pos = -1
-
         # Set file_name
         file_name = args.lex.split('\\')[-1:][0]
+        # Create lexer
+        mylex = MyLexer(file_name)
+        mylex.build() # Build the lexer
+        mylex.lexer.line_end_pos = -1
 
         # Give the lexer some input
         f = open(args.lex, "r")
@@ -62,16 +54,16 @@ if __name__ == '__main__':
                 print(token_str)
 
     elif args.parse:
-        # Create lexer
-        mylex = MyLexer()
-        mylex.build() # Build the lexer
-        mylex.lexer.line_end_pos = -1
-
         # Set file_name
         file_name = args.parse.split('\\')[-1:][0]
 
+        # Create lexer
+        mylex = MyLexer(file_name)
+        mylex.build() # Build the lexer
+        mylex.lexer.line_end_pos = -1
+
         # Create parser
-        mypars = MyParser(mylex)
+        mypars = MyParser(mylex, file_name)
         mypars.build(debug=False) # Build the parser
 
         # Give the parser some input
