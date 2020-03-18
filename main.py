@@ -6,13 +6,15 @@
 # -----------------------------------------------------------------------------
 import argparse
 import sys
+from mylexer import *
+from myparser import *
 
 # For the lexer
-exec(open("lexer.py").read())
+#exec(open("lexer.py").read())
 global file_name
 
 # For the parser
-exec(open("parser.py").read())
+#exec(open("parser.py").read())
 
 if __name__ == '__main__':
     # Parsing arguments
@@ -30,7 +32,7 @@ if __name__ == '__main__':
 
         # Set file_name
         file_name = args.lex.split('\\')[-1:][0]
-        
+
         # Give the lexer some input
         f = open(args.lex, "r")
         data = f.read()

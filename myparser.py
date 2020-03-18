@@ -50,7 +50,7 @@ class MyParser(object):
         if(len(p)==1):
             p[0] = Class()
         else:
-            if(isinstance(p[2],Test)):
+            if(isinstance(p[2], Field)):
                 p[1].add_field(p[2])
             else:
                 p[1].add_method(p[2])
