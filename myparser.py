@@ -315,7 +315,7 @@ class Method(Node):
         self.block = block
 
     def __str__(self):
-        str = get_obejct_string("Method", [self.formals, self.ret_type, self.block])
+        str = get_obejct_string("Method", [self.name, self.formals, self.ret_type, self.block])
         return str
 
 class Type(Node):
