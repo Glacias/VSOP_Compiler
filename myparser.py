@@ -234,15 +234,6 @@ class MyParser(object):
         else:
             p[0] = Boolean_literal(False)
 
-    #def p_Test(self, p):
-    #    '''Test : integer_literal
-    #            | Test integer_literal'''
-    #    if(len(p)==2):
-    #        p.test = Test([p[1]])
-    #    else:
-    #        p.test.add_class(p[2])
-    #    p[0] = p.test
-
     def p_error(self, p):
         if not p:
             error_str = file_name + ":" + str(self.lex.lexer.lineno)
@@ -316,9 +307,9 @@ class Field(Node):
 
     def __str__(self):
         if(self.init_expr==""):
-            str = get_obejct_string("Field", [self.name, self.type])
+            str = get_object_string("Field", [self.name, self.type])
         else:
-            str = get_obejct_string("Field", [self.name, self.type, self.init_expr])
+            str = get_object_string("Field", [self.name, self.type, self.init_expr])
         return str
 
     # Add init expr
@@ -333,7 +324,7 @@ class Method(Node):
         self.block = block
 
     def __str__(self):
-        str = get_obejct_string("Method", [self.name, self.formals, self.ret_type, self.block])
+        str = get_object_string("Method", [self.name, self.formals, self.ret_type, self.block])
         return str
 
 class Type(Node):
@@ -389,9 +380,9 @@ class Expr_if(Expr):
 
     def __str__(self):
         if(self.else_expr==""):
-            str = get_obejct_string("If", [self.cond_expr, self.then_expr])
+            str = get_object_string("If", [self.cond_expr, self.then_expr])
         else:
-            str = get_obejct_string("If", [self.cond_expr, self.then_expr, self.else_expr])
+            str = get_object_string("If", [self.cond_expr, self.then_expr, self.else_expr])
         return str
 
     def add_else_expr(self, expr):
@@ -403,7 +394,7 @@ class Expr_while(Expr):
         self.body_expr = body_expr
 
     def __str__(self):
-        return get_obejct_string("While", [self.cond_expr, self.body_expr])
+        return get_object_string("While", [self.cond_expr, self.body_expr])
 
 class Expr_let(Expr):
     def __init__(self, name, type, scope_expr):
@@ -414,9 +405,9 @@ class Expr_let(Expr):
 
     def __str__(self):
         if(self.init_expr==""):
-            str = get_obejct_string("Let", [self.name, self.type, self.scope_expr])
+            str = get_object_string("Let", [self.name, self.type, self.scope_expr])
         else:
-            str = get_obejct_string("Let", [self.name, self.type, self.init_expr, self.scope_expr])
+            str = get_object_string("Let", [self.name, self.type, self.init_expr, self.scope_expr])
         return str
 
     # Add init expr
@@ -428,14 +419,14 @@ class Expr_assign(Expr):
         self.name = name
         self.expr = expr
     def __str__(self):
-        return get_obejct_string("Assign", [self.name, self.expr])
+        return get_object_string("Assign", [self.name, self.expr])
 
 class Expr_UnOp(Expr):
     def __init__(self, unop, expr):
         self.unop = unop
         self.expr = expr
     def __str__(self):
-        return get_obejct_string("UnOp", [self.unop, self.expr])
+        return get_object_string("UnOp", [self.unop, self.expr])
 
 class Expr_BinOp(Expr):
     def __init__(self, op, left_expr, right_expr):
@@ -443,7 +434,7 @@ class Expr_BinOp(Expr):
         self.left_expr = left_expr
         self.right_expr = right_expr
     def __str__(self):
-        return get_obejct_string("BinOp", [self.op, self.left_expr, self.right_expr])
+        return get_object_string("BinOp", [self.op, self.left_expr, self.right_expr])
 
 class Expr_Call(Expr):
     def __init__(self, method_name, expr_list):
@@ -451,7 +442,7 @@ class Expr_Call(Expr):
         self.method_name = method_name
         self.expr_list = expr_list
     def __str__(self):
-        return get_obejct_string("Call", [self.object_expr, self.method_name, self.expr_list])
+        return get_object_string("Call", [self.object_expr, self.method_name, self.expr_list])
     def add_object_expr(self, expr):
         self.object_expr = expr
 
@@ -465,7 +456,7 @@ class Expr_New(Expr):
     def __init__(self, type_name):
         self.type_name = type_name
     def __str__(self):
-        return get_obejct_string("New", [self.type_name])
+        return get_object_string("New", [self.type_name])
 
 class Expr_Unit(Expr):
     def __init__(self):
@@ -522,7 +513,7 @@ def get_list_string(list):
     return str
 
 # Generate the string of an object (Ex : If(1, 2))
-def get_obejct_string(name, list):
+def get_object_string(name, list):
     str = name + "("
     if(len(list)==0):
         return str + ")"
