@@ -1,16 +1,20 @@
 class A extends F {
-
+    i : int32;
+    s : string;
+    e : bool;
 }
 
 class B extends A {
-
+    i : int32;
+    s : string;
+    selfe : bool;
 }
 
 class C extends B {
 
 }
 
-class D extends C {
+class T extends Object {
 
 }
 

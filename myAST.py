@@ -283,22 +283,6 @@ class Boolean_literal(Node):
             str = "false"
         return str
 
-
-
-
-## To change
-class Test(Node):
-    def __init__(self, list):
-        Node.__init__(self)
-        self.list = list
-
-    def add_class(self, c):
-        self.list.append(c)
-    def __str__(self):
-        return get_list_string(self.list)
-
-
-
 ### General Functions
 # Generate the string of a list
 def get_list_string(list):

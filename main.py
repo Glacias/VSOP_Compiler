@@ -94,6 +94,8 @@ if __name__ == '__main__':
         f = open(args.check, "r")
         data = f.read()
         ast = mypars.parser.parse(data)
+
+        # Check semantic
         updatedAst = checkSemantic(ast, file_name)
         print(updatedAst)
 
