@@ -1,11 +1,19 @@
 ##### Classes for AST
 # General class node
 class Node:
-    pass
+    def __init__(self):
+        self.type = ""
+        self.line = -1
+        self.col = -1
+
+    def add_position(self, line, col):
+        self.line = line
+        self.col = col
 
 # Program
 class Program(Node):
     def __init__(self):
+        Node.__init__(self)
         self.list_class = []
 
     # Print the list of class
@@ -19,8 +27,13 @@ class Program(Node):
 # Class
 class Class(Node):
     def __init__(self):
+        Node.__init__(self)
         self.name = ""
+        self.nameLine = -1
+        self.nameCol = -1
         self.parent = "Object"
+        self.parentLine = -1
+        self.parentCol = -1
         self.fields = []
         self.methods = []
 
@@ -48,9 +61,20 @@ class Class(Node):
     def add_method(self, method):
         self.methods.append(method)
 
+    # Add position for name
+    def add_position_name(self, line, col):
+        self.nameLine = line
+        self.nameCol = col
+
+    # Add position for parent
+    def add_position_parent(self, line, col):
+        self.parentLine = line
+        self.parentCol = col
+
 # Field
 class Field(Node):
     def __init__(self, name, type):
+        Node.__init__(self)
         self.name = name
         self.type = type
         self.init_expr = ""
@@ -68,6 +92,7 @@ class Field(Node):
 
 class Method(Node):
     def __init__(self, name, formals, ret_type, block):
+        Node.__init__(self)
         self.name = name
         self.formals = formals
         self.ret_type = ret_type
@@ -79,6 +104,7 @@ class Method(Node):
 
 class Type(Node):
     def __init__(self, type):
+        Node.__init__(self)
         self.type = type
 
     def __str__(self):
@@ -86,6 +112,7 @@ class Type(Node):
 
 class Formals(Node):
     def __init__(self):
+        Node.__init__(self)
         self.list_formals = []
 
     def __str__(self):
@@ -97,6 +124,7 @@ class Formals(Node):
 
 class Formal(Node):
     def __init__(self, name, type):
+        Node.__init__(self)
         self.name = name
         self.type = type
 
@@ -106,6 +134,7 @@ class Formal(Node):
 
 class Block(Node):
     def __init__(self):
+        Node.__init__(self)
         self.list_expr = []
 
     def __str__(self):
@@ -124,6 +153,7 @@ class Expr(Node):
 
 class Expr_if(Expr):
     def __init__(self, cond_expr, then_expr):
+        Node.__init__(self)
         self.cond_expr = cond_expr
         self.then_expr = then_expr
         self.else_expr = ""
@@ -140,6 +170,7 @@ class Expr_if(Expr):
 
 class Expr_while(Expr):
     def __init__(self, cond_expr, body_expr):
+        Node.__init__(self)
         self.cond_expr = cond_expr
         self.body_expr = body_expr
 
@@ -148,6 +179,7 @@ class Expr_while(Expr):
 
 class Expr_let(Expr):
     def __init__(self, name, type, scope_expr):
+        Node.__init__(self)
         self.name = name
         self.type = type
         self.init_expr = ""
@@ -166,6 +198,7 @@ class Expr_let(Expr):
 
 class Expr_assign(Expr):
     def __init__(self, name, expr):
+        Node.__init__(self)
         self.name = name
         self.expr = expr
     def __str__(self):
@@ -173,6 +206,7 @@ class Expr_assign(Expr):
 
 class Expr_UnOp(Expr):
     def __init__(self, unop, expr):
+        Node.__init__(self)
         self.unop = unop
         self.expr = expr
     def __str__(self):
@@ -180,6 +214,7 @@ class Expr_UnOp(Expr):
 
 class Expr_BinOp(Expr):
     def __init__(self, op, left_expr, right_expr):
+        Node.__init__(self)
         self.op = op
         self.left_expr = left_expr
         self.right_expr = right_expr
@@ -188,6 +223,7 @@ class Expr_BinOp(Expr):
 
 class Expr_Call(Expr):
     def __init__(self, method_name, expr_list):
+        Node.__init__(self)
         self.object_expr = "self"
         self.method_name = method_name
         self.expr_list = expr_list
@@ -198,24 +234,28 @@ class Expr_Call(Expr):
 
 class Expr_Object_identifier(Expr):
     def __init__(self, name):
+        Node.__init__(self)
         self.name = name
     def __str__(self):
         return self.name.__str__()
 
 class Expr_New(Expr):
     def __init__(self, type_name):
+        Node.__init__(self)
         self.type_name = type_name
     def __str__(self):
         return get_object_string("New", [self.type_name])
 
 class Expr_Unit(Expr):
     def __init__(self):
+        Node.__init__(self)
         self.unit = "()"
     def __str__(self):
         return self.unit.__str__()
 
 class Args(Node):
     def __init__(self):
+        Node.__init__(self)
         self.list_args = []
     def __str__(self):
         return get_list_string(self.list_args)
@@ -224,6 +264,7 @@ class Args(Node):
 
 class Literal(Node):
     def __init__(self, literal):
+        Node.__init__(self)
         self.literal = literal
 
     def __str__(self):
@@ -232,6 +273,7 @@ class Literal(Node):
 
 class Boolean_literal(Node):
     def __init__(self, bool):
+        Node.__init__(self)
         self.bool = bool
 
     def __str__(self):
@@ -241,14 +283,21 @@ class Boolean_literal(Node):
             str = "false"
         return str
 
+
+
+
+## To change
 class Test(Node):
     def __init__(self, list):
+        Node.__init__(self)
         self.list = list
 
     def add_class(self, c):
         self.list.append(c)
     def __str__(self):
         return get_list_string(self.list)
+
+
 
 ### General Functions
 # Generate the string of a list

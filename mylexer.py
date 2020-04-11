@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# lexer.py
+# mylexer.py
 #
 # File responsible for the lexical analysis
 # Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
@@ -61,6 +61,8 @@ class MyLexer(object):
         'object_identifier',
         'string_literal'] + keyword + list(operator.values())
 
+
+
     # Init
     def __init__(self, file):
         global file_name
@@ -77,6 +79,7 @@ class MyLexer(object):
         r'\n'
         t.lexer.lineno += 1
         t.lexer.line_end_pos = t.lexpos
+        t.lexer.line_end_pos_table.append(t.lexpos)
 
     def t_whitespace(self, t):
         r'[ \t\r\f]'
@@ -102,6 +105,7 @@ class MyLexer(object):
         r'\n'
         t.lexer.lineno += 1
         t.lexer.line_end_pos = t.lexpos
+        t.lexer.line_end_pos_table.append(t.lexpos)
 
     def t_commentmode_lnestedcom(self, t):
         r'\(\*'
@@ -171,6 +175,7 @@ class MyLexer(object):
         elif("\n" in t.value):
             t.lexer.lineno += 1
             t.lexer.line_end_pos = t.lexpos + 1
+            t.lexer.line_end_pos_table.append(t.lexpos+1)
         else:
             t.lexer.stringvalue += t.value
 

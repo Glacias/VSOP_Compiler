@@ -8,12 +8,14 @@ import argparse
 import sys
 from mylexer import *
 from myparser import *
+from mySemanticAnalysis import *
 
 if __name__ == '__main__':
     # Parsing arguments
     parser_arg = argparse.ArgumentParser()
     parser_arg.add_argument('-lex', help='Path to the input VSOP source code for lexical analysis')
     parser_arg.add_argument('-parse', help='Path to the input VSOP source code for syntax analysis')
+    parser_arg.add_argument('-check', help='Path to the input VSOP source code for semantic analysis')
     args = parser_arg.parse_args()
 
     # Check for path
@@ -24,6 +26,7 @@ if __name__ == '__main__':
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
         mylex.lexer.line_end_pos = -1
+        mylex.lexer.line_end_pos_table = [0]
 
         # Give the lexer some input
         f = open(args.lex, "r")
@@ -61,6 +64,7 @@ if __name__ == '__main__':
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
         mylex.lexer.line_end_pos = -1
+        mylex.lexer.line_end_pos_table = [0]
 
         # Create parser
         mypars = MyParser(mylex, file_name)
@@ -71,6 +75,27 @@ if __name__ == '__main__':
         data = f.read()
         out = mypars.parser.parse(data)
         print(out)
+
+    elif args.check:
+        # Set file_name
+        file_name = args.check.split('\\')[-1:][0]
+
+        # Create lexer
+        mylex = MyLexer(file_name)
+        mylex.build() # Build the lexer
+        mylex.lexer.line_end_pos = -1
+        mylex.lexer.line_end_pos_table = [0]
+
+        # Create parser
+        mypars = MyParser(mylex, file_name)
+        mypars.build(debug=False) # Build the parser
+
+        # Give the parser some input
+        f = open(args.check, "r")
+        data = f.read()
+        ast = mypars.parser.parse(data)
+        updatedAst = checkSemantic(ast, file_name)
+        print(updatedAst)
 
     else:
         sys.stderr.write("Argument missing : Path to the input VSOP source code.\n")

@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# parser.py
+# myparser.py
 #
 # File responsible for the syntax analysis
 # Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
@@ -46,6 +46,7 @@ class MyParser(object):
                    | Program Class'''
         if(len(p)==2):
             self.ast_root.add_class(p[1])
+            self.ast_root.add_position(0,0)
         else:
             self.ast_root.add_class(p[2])
         p[0] = self.ast_root
@@ -69,23 +70,31 @@ class MyParser(object):
         if(len(p)==6):
             p[0] = p[4]
             p[0].change_name(p[2])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+            p[0].add_position_name(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
         else:
             p[0] = p[6]
             p[0].change_name(p[2])
             p[0].change_parent(p[4])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+            p[0].add_position_name(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
+            p[0].add_position_parent(p.lineno(4), p.lexpos(4) - p.lexer.line_end_pos_table[p.lineno(4)-1])
 
     def p_Field(self, p):
         '''Field : object_identifier colon Type semicolon
                  | object_identifier colon Type assign Expr semicolon'''
         if(len(p)==5):
             p[0] = Field(p[1], p[3])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
         else:
             p[0] = Field(p[1], p[3])
             p[0].add_init_expr(p[5])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Method(self, p):
         'Method : object_identifier lpar Formals rpar colon Type Block'
         p[0] = Method(p[1], p[3], p[6], p[7])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Type(self, p):
         '''Type : type_identifier
@@ -94,6 +103,7 @@ class MyParser(object):
                 | string
                 | unit'''
         p[0] = Type(p[1])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Formals(self, p):
         '''Formals :
@@ -101,9 +111,11 @@ class MyParser(object):
                    | Formals comma Formal'''
         if(len(p)==1):
             p[0] = Formals()
+            p[0].add_position(p.lineno(0), p.lexpos(0) - p.lexer.line_end_pos_table[p.lineno(0)-1])
         elif(len(p)==2):
             p[0] = Formals()
             p[0].add_formal(p[1])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
         else:
             p[0] = p[1]
             p[0].add_formal(p[3])
@@ -111,10 +123,12 @@ class MyParser(object):
     def p_Formal(self, p):
         'Formal : object_identifier colon Type'
         p[0] = Formal(p[1], p[3])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Block(self, p):
         'Block : lbrace Block_body rbrace'
         p[0] = p[2]
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Block_body(self, p):
         '''Block_body : Expr
@@ -133,34 +147,42 @@ class MyParser(object):
         if(len(p)==7):
             p[0] = Expr_if(p[2], p[4])
             p[0].add_else_expr(p[6])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
         else:
             p[0] = Expr_if(p[2], p[4])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_while(self, p):
         'Expr : while Expr do Expr %prec while_prec'
         p[0] = Expr_while(p[2], p[4])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_let(self, p):
         '''Expr : let object_identifier colon Type in Expr %prec let_prec
                 | let object_identifier colon Type assign Expr in Expr %prec let_prec_assign'''
         if(len(p)==7):
             p[0] = Expr_let(p[2], p[4], p[6])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
         else:
             p[0] = Expr_let(p[2], p[4], p[8])
             p[0].add_init_expr(p[6])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_assign(self, p):
         'Expr : object_identifier assign Expr'
         p[0] = Expr_assign(p[1], p[3])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_uminus(self, p):
         'Expr : minus Expr %prec uminus'
         p[0] = Expr_UnOp(p[1], p[2])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_UnOp(self, p):
         '''Expr : not Expr
                 | isnull Expr'''
         p[0] = Expr_UnOp(p[1], p[2])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_BinOp(self, p):
         '''Expr : Expr and Expr
@@ -173,39 +195,48 @@ class MyParser(object):
                 | Expr div Expr
                 | Expr pow Expr'''
         p[0] = Expr_BinOp(p[2], p[1], p[3])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_Call(self, p):
         '''Expr : object_identifier lpar Args rpar
                 | Expr dot object_identifier lpar Args rpar'''
         if(len(p)==5):
             p[0] = Expr_Call(p[1], p[3])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
         else:
             p[0] = Expr_Call(p[3], p[5])
             p[0].add_object_expr(p[1])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_New(self, p):
         'Expr : new type_identifier'
         p[0] = Expr_New(p[2])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_Object_id(self, p):
         'Expr : object_identifier'
         p[0] = Expr_Object_identifier(p[1])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_literal(self, p):
         'Expr : Literal'
         p[0] = p[1]
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_Unit(self, p):
         'Expr : lpar rpar'
         p[0] = Expr_Unit()
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_Par_expr(self, p):
         'Expr : lpar Expr rpar'
         p[0] = p[2]
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_block(self,p):
         'Expr : Block'
         p[0] = p[1]
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Args(self, p):
         '''Args :
@@ -213,9 +244,11 @@ class MyParser(object):
                 | Args comma Expr'''
         if(len(p)==1):
             p[0] = Args()
+            p[0].add_position(p.lineno(0), p.lexpos(0) - p.lexer.line_end_pos_table[p.lineno(0)-1])
         elif(len(p)==2):
             p[0] = Args()
             p[0].add_arg(p[1])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
         else:
             p[0] = p[1]
             p[0].add_arg(p[3])
@@ -226,14 +259,17 @@ class MyParser(object):
                    | string_literal
                    | Boolean_literal'''
         p[0] = Literal(p[1])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Boolean_literal(self, p):
         '''Boolean_literal : true
                            | false'''
         if(p[1]=="true"):
             p[0] = Boolean_literal(True)
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
         else:
             p[0] = Boolean_literal(False)
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_error(self, p):
         if not p:
