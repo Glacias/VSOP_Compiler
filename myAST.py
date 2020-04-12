@@ -91,15 +91,15 @@ class Field(Node):
         self.init_expr = init_expr
 
 class Method(Node):
-    def __init__(self, name, formals, ret_type, block):
+    def __init__(self, name, formals, type, block):
         Node.__init__(self)
         self.name = name
         self.formals = formals
-        self.ret_type = ret_type
+        self.type = type
         self.block = block
 
     def __str__(self):
-        str = get_object_string("Method", [self.name, self.formals, self.ret_type, self.block])
+        str = get_object_string("Method", [self.name, self.formals, self.type, self.block])
         return str
 
 class Type(Node):

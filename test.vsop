@@ -1,13 +1,11 @@
-class A extends F {
+class A {
     i : int32;
     s : string;
-    e : bool;
+    k : A;
 }
 
 class B extends A {
-    i : int32;
-    s : string;
-    selfe : bool;
+
 }
 
 class C extends B {
@@ -15,13 +13,17 @@ class C extends B {
 }
 
 class T extends Object {
-
+    ing : int32;
+    sf : string;
+    ed : bool;
 }
 
-class E extends D {
+class E extends T {
 
 }
 
 class F extends E {
-
+    i : int32;
+    s : string;
+    selfe : bool;
 }

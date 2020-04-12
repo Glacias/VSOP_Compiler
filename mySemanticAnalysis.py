@@ -14,6 +14,8 @@ def checkSemantic(ast, file):
     file_name = file # Save the file name for error reporting
     global error_buffer
     error_buffer = queue.PriorityQueue() # Create the error buffer
+    global typesOfType
+    typesOfType = {"int32", "bool", "string", "unit"}
 
     # Make global symbol table and add all classes to it
     gst = globalSymbolTable()
@@ -21,13 +23,16 @@ def checkSemantic(ast, file):
     # Add the Object class
     gst.add_class(class_Object())
 
+    # For every class
     for cl in ast.list_class:
-        # Adding a class checks :
+        # Adding a class also checks :
         # - that a class or more were not already defined (+ special case for Object)
-        # - that a method was not defined twice in the same class
         # - that a field was not defined twice in the same class
-        # - that a field name is not equal to "self"
+        # - that a field is not named self
+        # - that a method was not defined twice in the same class
+        # - that a method's formals were not defined twice or named to self
         gst.add_class(cl)
+        typesOfType.add(cl.name) # Add the class name as a new type of type
 
     # If errors were detected, exit
     if not error_buffer.empty():
@@ -37,7 +42,13 @@ def checkSemantic(ast, file):
     checkForCycle(ast, gst)
 
     # Check that a child's field does not overide a parent's field
+    checkFieldsMethodsAndFormals(ast, gst)
 
+
+
+    # If errors were detected, exit
+    if not error_buffer.empty():
+        terminate()
 
     return ast
 
@@ -75,7 +86,7 @@ class globalSymbolTable():
                 elif field_class.name == "self":
                     error_message(field_class.line, field_class.col, "A field cannot be named self.")
                 else:
-                    # Add the field
+                    # Add the field (stored info is the field)
                     dictFields[field_class.name] = field_class
 
             # Fill methods
@@ -86,15 +97,50 @@ class globalSymbolTable():
                     oldMethod = dictMethods[method_class.name]
                     error_message(method_class.line, method_class.col, "field " + method_class.name + " was already defined at " + str(oldMethod.line) + ":" + str(oldMethod.col) + ".")
                 else:
-                    # Add the method
-                    dictMethods[method_class.name] = method_class
+                    # Create a dictonnary for formals
+                    dictFormals = {}
 
-            # Add the class
-            self.class_table[node_class.name] = [node_class, dictFields, dictMethods];
+                    # Fill formals
+                    for formal_class in method_class.formals.list_formals:
+                        # Check for already defined fields
+                        if formal_class.name in dictFormals:
+                            # Write the error
+                            oldFormal = dictFormals[formal_class.name]
+                            error_message(formal_class.line, formal_class.col, "redefinition of formal parameter " + formal_class.name + ",\n    first defined at " + str(oldFormal.line) + ":" + str(oldFormal.col) + ".")
+                        # Check for a field named self
+                        elif formal_class.name == "self":
+                            error_message(formal_class.line, formal_class.col, "A formal parameter cannot be named self.")
+                        else:
+                            # Add the formal (stored info is the type)
+                            dictFormals[formal_class.name] = formal_class.type
+
+                    # Add the method with formals
+                    # (stored info is the method and dictonnary of formals)
+                    dictMethods[method_class.name] = (method_class, dictFormals)
+
+            # Add the class with fields and methods
+            # (stored info is the class, dictonnary of fields and dictonnary of methods)
+            self.class_table[node_class.name] = (node_class, dictFields, dictMethods);
 
     # Look for a class and return the info and None if the class is not there
     def lookupForClass(self, className):
         return self.class_table.get(className)
+
+    # Look up for a field in a class and the ancestors of that class
+    # Return info or None if field not found
+    def lookupFieldsAncestors(self, cl, fieldName):
+        # Get the info of the class
+        classInfo = self.lookupForClass(cl.name)
+        # Look inside the class fields
+        fieldInfo = classInfo[1].get(fieldName)
+        # If field not found, look in parents
+        # Stop at Object since it has no fields
+        if fieldInfo is None and cl.parent != "Object":
+            parentInfo = self.lookupForClass(cl.parent)
+            # Recursive call in order to look at all ancestors
+            return self.lookupFieldsAncestors(parentInfo[0], fieldName)
+        else:
+            return (fieldInfo, cl.name)
 
 
 # Create a symbol table
@@ -171,6 +217,54 @@ def checkForCycle(ast, gst):
     if not error_buffer.empty():
         terminate()
 
+
+# Check that a child's field does not overide a parent's field
+#  and that types in field, methods and formals exist
+def checkFieldsMethodsAndFormals(ast, gst):
+    # For every class
+    for cl in ast.list_class:
+        # Check that it has a parent
+        if cl.parent != "Object":
+            # For every field in the class
+            for fl in cl.fields:
+                # Get the info for field in the ancestors
+                parentInfo = gst.lookupForClass(cl.parent)
+                fieldInfo = gst.lookupFieldsAncestors(parentInfo[0], fl.name)
+                # If the info is not None, redefinition of field
+                if fieldInfo[0] is not None:
+                    error_message(fl.line, fl.col, "redefinition of field " + fl.name + ", \n    first defined in parent class " + fieldInfo[1] + " at " + str(fieldInfo[0].line) + ":" + str(fieldInfo[0].col))
+                # Check that field type exist
+                if not typeExist(fl.type):
+                    error_message(fl.line, fl.col, "unknown type " + fl.type.type)
+        else:
+            # For every field in the class
+            for fl in cl.fields:
+                # Check that field type exist
+                if not typeExist(fl.type):
+                    error_message(fl.line, fl.col, "unknown type " + fl.type.type)
+
+        # For every method in the class
+        for mt in cl.methods:
+            # Check that method type exist
+            if not typeExist(mt.type):
+                error_message(mt.line, mt.col, "unknown type " + mt.type.type)
+            # For every formal in method
+            for fm in mt.formals.list_formals:
+                # Check that formal type exist
+                if not typeExist(fm.type):
+                    error_message(fm.line, fm.col, "unknown type " + fm.type.type)
+
+    # If errors were detected, exit
+    if not error_buffer.empty():
+        terminate()
+
+
+# Check that a type exist
+def typeExist(type_class):
+    if type_class.type in typesOfType:
+        return True
+    else:
+        return False
 
 # Create the class Object
 def class_Object():
