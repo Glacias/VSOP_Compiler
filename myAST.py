@@ -2,7 +2,7 @@
 # General class node
 class Node:
     def __init__(self):
-        self.type = ""
+        #self.checktype = ""
         self.line = -1
         self.col = -1
 

@@ -2,10 +2,12 @@ class A {
     i : int32;
     s : string;
     k : A;
+
+    main(i : string, s : string) : int32 { 1 }
 }
 
 class B extends A {
-
+    main(i : string, s : string) : int32 { 1 }
 }
 
 class C extends B {

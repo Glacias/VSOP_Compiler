@@ -111,7 +111,7 @@ class MyParser(object):
                    | Formals comma Formal'''
         if(len(p)==1):
             p[0] = Formals()
-            p[0].add_position(p.lineno(0), p.lexpos(0) - p.lexer.line_end_pos_table[p.lineno(0)-1])
+            #p[0].add_position(p.lineno(0), p.lexpos(0) - p.lexer.line_end_pos_table[p.lineno(0)-1])
         elif(len(p)==2):
             p[0] = Formals()
             p[0].add_formal(p[1])

@@ -41,9 +41,11 @@ def checkSemantic(ast, file):
     # Check for cycles in class inheritance and check that parent are defined
     checkForCycle(ast, gst)
 
-    # Check that a child's field does not overide a parent's field
+    # Check :
+    # - that a child's field does not overide a parent's field
+    # - that an overwriten method has the same signature
+    # - that types in field, methods and formals exist
     checkFieldsMethodsAndFormals(ast, gst)
-
 
 
     # If errors were detected, exit
@@ -127,7 +129,7 @@ class globalSymbolTable():
         return self.class_table.get(className)
 
     # Look up for a field in a class and the ancestors of that class
-    # Return info or None if field not found
+    # Return (fieldInfo, className) or (None, className) if field not found
     def lookupFieldsAncestors(self, cl, fieldName):
         # Get the info of the class
         classInfo = self.lookupForClass(cl.name)
@@ -141,6 +143,21 @@ class globalSymbolTable():
             return self.lookupFieldsAncestors(parentInfo[0], fieldName)
         else:
             return (fieldInfo, cl.name)
+
+    # Look up for a method in a class and the ancestors of that class
+    # Return (methodInfo, className) or (None, className) if method not found
+    def lookupMethodsAncestors(self, cl, methodName):
+        # Get the info of the class
+        classInfo = self.lookupForClass(cl.name)
+        # Look inside the class methods
+        methodInfo = classInfo[2].get(methodName)
+        # If field not found, look in parents
+        if methodInfo is None and cl.parent != "":
+            parentInfo = self.lookupForClass(cl.parent)
+            # Recursive call in order to look at all ancestors
+            return self.lookupMethodsAncestors(parentInfo[0], methodName)
+        else:
+            return (methodInfo, cl.name)
 
 
 # Create a symbol table
@@ -218,41 +235,75 @@ def checkForCycle(ast, gst):
         terminate()
 
 
-# Check that a child's field does not overide a parent's field
+# Check that a child's field does not overide a parent's field,
+#  that an overwriten method has the same signature
 #  and that types in field, methods and formals exist
 def checkFieldsMethodsAndFormals(ast, gst):
     # For every class
     for cl in ast.list_class:
+        ## Fields
         # Check that it has a parent
         if cl.parent != "Object":
             # For every field in the class
             for fl in cl.fields:
+                # Check that field type exist
+                if not typeExist(fl.type):
+                    error_message(fl.type.line, fl.type.col, "unknown type " + fl.type.type)
+
+                # Check that field was not redefined
                 # Get the info for field in the ancestors
                 parentInfo = gst.lookupForClass(cl.parent)
                 fieldInfo = gst.lookupFieldsAncestors(parentInfo[0], fl.name)
                 # If the info is not None, redefinition of field
                 if fieldInfo[0] is not None:
                     error_message(fl.line, fl.col, "redefinition of field " + fl.name + ", \n    first defined in parent class " + fieldInfo[1] + " at " + str(fieldInfo[0].line) + ":" + str(fieldInfo[0].col))
-                # Check that field type exist
-                if not typeExist(fl.type):
-                    error_message(fl.line, fl.col, "unknown type " + fl.type.type)
         else:
             # For every field in the class
             for fl in cl.fields:
                 # Check that field type exist
                 if not typeExist(fl.type):
-                    error_message(fl.line, fl.col, "unknown type " + fl.type.type)
+                    error_message(fl.type.line, fl.type.col, "unknown type " + fl.type.type)
 
+        ## Methods
         # For every method in the class
         for mt in cl.methods:
             # Check that method type exist
             if not typeExist(mt.type):
-                error_message(mt.line, mt.col, "unknown type " + mt.type.type)
+                error_message(mt.type.line, mt.type.col, "unknown type " + mt.type.type)
+
+            ## Formals
             # For every formal in method
             for fm in mt.formals.list_formals:
                 # Check that formal type exist
                 if not typeExist(fm.type):
-                    error_message(fm.line, fm.col, "unknown type " + fm.type.type)
+                    error_message(fm.type.line, fm.type.col, "unknown type " + fm.type.type)
+
+            # Check that an overwriten method has the same signature
+            # Get the info for method in the ancestors
+            parentInfo = gst.lookupForClass(cl.parent)
+            methodInfo = gst.lookupMethodsAncestors(parentInfo[0], mt.name)
+            parentMethodInfo = methodInfo[0]
+            # If the info is not None
+            if parentMethodInfo is not None:
+                # Check for signature
+                # First check return type
+                if not parentMethodInfo[0].type.type == mt.type.type:
+                    # Write error msg
+                    error_message(mt.type.line, mt.type.col, "Could not overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    return type " + mt.type.type + " does not match the overwriten method's return type " + parentMethodInfo[0].type.type)
+                # And check the formals
+                # First check the size of both formals
+                parentListFormals = parentMethodInfo[0].formals.list_formals
+                listFormals = mt.formals.list_formals
+                if len(parentListFormals) == len(listFormals):
+                    # Check that formals are the same (order maters)
+                    for i in range(len(listFormals)):
+                        if parentListFormals[i].name != listFormals[i].name:
+                            error_message(listFormals[i].line, listFormals[i].col, "Could not overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    formal argument name " + listFormals[i].name + " does not match name " + parentListFormals[i].name)
+                        if parentListFormals[i].type.type != listFormals[i].type.type:
+                            error_message(listFormals[i].line, listFormals[i].col, "Could not overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    formal argument type " + listFormals[i].type.type + " does not match type " + parentListFormals[i].type.type)
+                else:
+                    # Write error msg
+                    error_message(mt.line, mt.col, "Could not overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    number of formal argument does not match")
 
     # If errors were detected, exit
     if not error_buffer.empty():
@@ -277,21 +328,21 @@ def class_Object():
 
     ## Add predefined methods
     # print
-    printF1 = Formal("s", "string")
+    printF1 = Formal("s", Type("string"))
     printFormals = Formals()
     printFormals.add_formal(printF1)
     print = Method("print", printFormals, "Obejct", "{ (* print s on stdout, then return self *) }")
     obj.add_method(print)
 
     # printBool
-    printBoolF1 = Formal("b", "bool")
+    printBoolF1 = Formal("b", Type("bool"))
     printBoolFormals = Formals()
     printBoolFormals.add_formal(printBoolF1)
     printBool = Method("printBool", printBoolFormals, "Obejct", "{ (* print b on stdout, then return self *) }")
     obj.add_method(printBool)
 
     # printInt32
-    printInt32F1 = Formal("i", "int32")
+    printInt32F1 = Formal("i", Type("int32"))
     printInt32Formals = Formals()
     printInt32Formals.add_formal(printInt32F1)
     printInt32 = Method("printInt32", printInt32Formals, "Obejct", "{ (* print b on stdout, then return self *) }")
