@@ -22,6 +22,7 @@ def checkSemantic(ast, file):
 
     # Add the Object class
     gst.add_class(class_Object())
+    typesOfType.add("Object") # Add the class Object as a new type of type
 
     # For every class
     for cl in ast.list_class:
@@ -41,13 +42,14 @@ def checkSemantic(ast, file):
     # Check for cycles in class inheritance and check that parent are defined
     checkForCycle(ast, gst)
 
-    # Check :
-    # - that a child's field does not overide a parent's field
-    # - that an overwriten method has the same signature
-    # - that types in field, methods and formals exist
+    # Check that a child's field does not overide a parent's field,
+    #  that an overwriten method has the same signature
+    #  and that types in field, methods and formals exist
+    #  and fill the ancestor list in the class
     checkFieldsMethodsAndFormals(ast, gst)
 
     # Full type checking
+    ast.checkTypeTree(gst, file_name, error_buffer)
 
     # Check that a main class and main method was defined
     checkForMain(ast, gst)
@@ -126,7 +128,7 @@ class globalSymbolTable():
 
             # Add the class with fields and methods
             # (stored info is the class, dictonnary of fields and dictonnary of methods)
-            self.class_table[node_class.name] = (node_class, dictFields, dictMethods)
+            self.class_table[node_class.name] = [node_class, dictFields, dictMethods, []]
 
     # Look for a class and return the info and None if the class is not there
     def lookupForClass(self, className):
@@ -163,31 +165,79 @@ class globalSymbolTable():
         else:
             return (methodInfo, cl.name)
 
+    # Search for first common ancestor (assumes that the classes exist)
+    def commonAcenstor(self, nameClassA, nameClassB):
+        # Check that they are not the same class
+        if nameClassA == nameClassB:
+            return nameClassA
+        # Check that one of the classes in not Object
+        elif (nameClassA == "Object") or (nameClassB == "Object"):
+            return "Object"
+        else:
+            # Get info for both classes
+            classInfoA = self.lookupForClass(nameClassA)
+            classInfoB = self.lookupForClass(nameClassB)
+            # Get the full list of ancestor of class A and B
+            ancelistA = classInfoA[3]
+            ancelistB = classInfoB[3]
+            # Find the first common ancestor
+            i = len(ancelistA)-1
+            j = len(ancelistB)-1
+            while (ancelistA[i] == ancelistB[j]) and (i>=0) and (j>=0):
+                commonAncestor = ancelistA[i]
+                i -= 1
+                j -= 1
+            # Return the first common ancestor
+            return commonAncestor
 
-# Create a symbol table
-class symbolTable():
-    def __init__(self):
-        self.list_context = [{}]
-        self.nbr_context = 1;
 
-    # Enter a context
-    def enter_ctx(self):
-        self.list_context.append({})
-        self.nbr_context += 1
+    # Returns the list of ancestor (itself is in the list)
+    # This function assumes that the class exist
+    def getAncestorList(self, classA):
+        # Add itself to the list
+        ancelist = [classA.name]
+        current_class = classA
+        # Collect name of all ancestor
+        while (current_class.parent != "Object"):
+            next_class_name = current_class.parent
+            next_classInfo = self.lookupForClass(next_class_name)
+            ancelist.append(next_class_name)
+            current_class = next_classInfo[0]
+        # Add Object to the list
+        ancelist.append("Object")
+        return ancelist
 
-    # Bind a key to some info
-    def bind(self, key, info):
-        self.list_context[self.nbr_context-1][key] = info
+    # Add the list of ancestor (itself is in the list) to the class
+    # This function assumes that the class exist
+    def fillAncestorListInClassInfo(self, classA):
+        self.class_table[classA.name][3] = self.getAncestorList(classA)
 
-    # Exit a context
-    def exit_ctx(self):
-        self.list_context.pop()
-        self.nbr_context -= 1
+    # Check that class type are conform
+    def areClassConform(self, childClassName, parentClassName):
+        if parentClassName == childClassName:
+            return True
+        else:
+            childInfo = self.lookupForClass(childClassName)
+            ancelistChild = childInfo[3]
+            if parentClassName in ancelistChild:
+                return True
+            else:
+                return False
 
-    # Look up for a key in the symbol table and retreive info,
-    # return None if the key is not found
-    def lookup(self, key):
-        return self.list_context[self.nbr_context-1].get(key)
+    # Check that types are conform
+    # Assumes that type exist
+    def areConform(self, typeA, typeB):
+        # Types are both primitives
+        if isPrimitive(typeA) and isPrimitive(typeB):
+            # Check that both types are equal
+            if typeA == typeB:
+                return True
+        # They are both of class type
+        elif not (isPrimitive(typeA) or isPrimitive(typeB)):
+            return self.areClassConform(typeA, typeB)
+        # If one is primitive and the other class type
+        else:
+            return False
 
 
 # Check for cycles in class inheritance
@@ -242,9 +292,12 @@ def checkForCycle(ast, gst):
 # Check that a child's field does not overide a parent's field,
 #  that an overwriten method has the same signature
 #  and that types in field, methods and formals exist
+#  and fill the ancestor list in the class
 def checkFieldsMethodsAndFormals(ast, gst):
     # For every class
     for cl in ast.list_class:
+        ## Ancestor list
+        gst.fillAncestorListInClassInfo(cl)
         ## Fields
         # Check that it has a parent
         if cl.parent != "Object":
@@ -336,7 +389,6 @@ def checkForMain(ast, gst):
         error_message(1, 1, "class Main missing")
 
 
-
 # Check that a type exist
 def typeExist(type_class):
     if type_class.type in typesOfType:
@@ -388,6 +440,10 @@ def class_Object():
     obj.add_method(inputInt32)
 
     return obj
+
+# Check if a type name is primitive or not
+def isPrimitive(typeName):
+    return ((typeName == "int32") or (typeName == "bool") or (typeName == "string") or (typeName == "unit"))
 
 ### Error message functions
 # Generate error message

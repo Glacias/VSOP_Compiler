@@ -1,31 +1,31 @@
 class Main {
-    i : int32;
-    s : string;
+    i : int32 <- { 1; 2 };
+    s : string <- { 1; "lol" };
     k : Main;
 
     main() : int32 { 2 }
 }
 
 class B extends Main {
-
 }
 
 class C extends B {
-    ok(s : C) : string { 2 }
+    ok(s : C) : string { "Here is a simple string literal." }
 }
 
 class T extends Object {
     ing : int32;
     sf : string;
     ed : bool;
-    ok(s : T) : string { 2 }
+    ok(s : T) : bool { true }
 }
 
 class E extends T {
-
+    test : E <- { if { false } then { new T } else { new F }  };
 }
 
 class F extends E {
+    test2 : Object <- { if { false } then { new E } else { new F }  };
     i : int32;
     s : string;
     selfe : bool;

@@ -10,6 +10,10 @@ class Node:
         self.line = line
         self.col = col
 
+    def add_position_from_node(self, cl):
+        self.line = cl.line
+        self.col = cl.col
+
 # Program
 class Program(Node):
     def __init__(self):
@@ -25,11 +29,11 @@ class Program(Node):
         self.list_class.append(c)
 
     # Check the type of expression in the tree
-    def checkTypeTree(self, gst):
+    def checkTypeTree(self, gst, file_name, error_buffer):
         # For every class
         for cl in self.list_class:
             # Check type tree
-            cl.checkTypeTree(gst)
+            cl.checkTypeTree(gst, file_name, error_buffer)
 
 # Class
 class Class(Node):
@@ -79,13 +83,13 @@ class Class(Node):
         self.parentCol = col
 
     # Check the type of expression in the tree
-    def checkTypeTree(self, gst):
+    def checkTypeTree(self, gst, file_name, error_buffer):
         # For every field
         for fl in self.fields:
-            fl.checkTypeTree(gst)
+            fl.checkTypeTree(gst, file_name, error_buffer)
         # For every method
         for mt in self.methods:
-            mt.checkTypeTree(gst)
+            mt.checkTypeTree(gst, file_name, error_buffer)
 
 # Field
 class Field(Node):
@@ -107,11 +111,15 @@ class Field(Node):
         self.init_expr = init_expr
 
     # Check the type of expression in the tree
-    def checkTypeTree(self, gst):
-        if self.init_expr == "":
-            pass
-        else:
-            pass
+    def checkTypeTree(self, gst, file_name, error_buffer):
+        if self.init_expr != "":
+            # Create a symbol table
+            st = symbolTable()
+            # Check the expression
+            typeExpr = self.init_expr.checkExpr(gst, st, file_name, error_buffer)
+            # Check that the initializer type corresponds to the field type
+            if not gst.areConform(typeExpr, self.type.type):
+                error_message_ast(self.type.line, self.type.col, "the type of the initializer (" + typeExpr + ") must conform to the declared type of the field (" + self.type.type + ")", file_name, error_buffer)
 
 class Method(Node):
     def __init__(self, name, formals, type, block):
@@ -126,7 +134,7 @@ class Method(Node):
         return str
 
     # Check the type of expression in the tree
-    def checkTypeTree(self, gst):
+    def checkTypeTree(self, gst, file_name, error_buffer):
         pass
 
 class Type(Node):
@@ -174,6 +182,19 @@ class Block(Node):
     def add_expr(self, expr):
         self.list_expr.append(expr)
 
+    # Check the expressions of the block
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        # Open a new context
+        st.enter_ctx()
+        # Check all expression
+        for exp in self.list_expr:
+            typeExpr = exp.checkExpr(gst, st, file_name, error_buffer)
+        # The type of the last expression is the expression of the block
+        self.typeChecked = typeExpr
+        # Exit the context
+        st.exit_ctx()
+        return self.typeChecked
+
 ## Expressions
 class Expr(Node):
     pass
@@ -194,6 +215,38 @@ class Expr_if(Expr):
 
     def add_else_expr(self, expr):
         self.else_expr = expr
+
+    # Check the expressions of the conditional
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        # Check expr of if and then
+        typeCondExpr = self.cond_expr.checkExpr(gst, st, file_name, error_buffer)
+        typeThenExpr = self.then_expr.checkExpr(gst, st, file_name, error_buffer)
+        # Cond expr must be of type bool
+        if typeCondExpr != "bool":
+            error_message_ast(self.cond_expr.line, self.cond_expr.col, "If conditional expression must be of type bool", file_name, error_buffer)
+        # If then
+        if self.else_expr == "" :
+            return "unit"
+        # If then else
+        else:
+            # Check type for then expr
+            typeElseExpr = self.else_expr.checkExpr(gst, st, file_name, error_buffer)
+            # If one expr has unit type, if has unit type
+            if (typeThenExpr == "unit") or (typeElseExpr == "unit"):
+                return "unit"
+            # Types are both primitives
+            elif isPrimitive(typeThenExpr) and isPrimitive(typeElseExpr):
+                # Check that both types are equal
+                if typeThenExpr == typeElseExpr:
+                    return typeThenExpr
+            # They are both of class type
+            elif not (isPrimitive(typeThenExpr) or isPrimitive(typeElseExpr)):
+                # Return the first common ancestor
+                return gst.commonAcenstor(typeThenExpr, typeElseExpr)
+
+        # Error recovery
+        error_message_ast(self.line, self.col, "The type of the expression inside then (" + typeThenExpr + ") does not agree with expression inside else (" + typeElseExpr + ")", file_name, error_buffer)
+        return "unit"
 
 class Expr_while(Expr):
     def __init__(self, cond_expr, body_expr):
@@ -230,6 +283,12 @@ class Expr_assign(Expr):
         self.expr = expr
     def __str__(self):
         return get_object_string("Assign", [self.name, self.expr])
+
+    # Check expression of assign and that it does not assign to self
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        if self.name == "self":
+            error_message_ast(self.line, self.col, "cannot assign to self")
+
 
 class Expr_UnOp(Expr):
     def __init__(self, unop, expr):
@@ -272,6 +331,9 @@ class Expr_New(Expr):
         self.type_name = type_name
     def __str__(self):
         return get_object_string("New", [self.type_name])
+    # Check that the type is valid
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        return self.type_name
 
 class Expr_Unit(Expr):
     def __init__(self):
@@ -279,6 +341,9 @@ class Expr_Unit(Expr):
         self.unit = "()"
     def __str__(self):
         return self.unit.__str__()
+
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        return "unit"
 
 class Args(Node):
     def __init__(self):
@@ -298,6 +363,15 @@ class Literal(Node):
         str = self.literal.__str__()
         return str
 
+    # Check expression of literal
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        if isinstance(self.literal, int):
+            return "int32"
+        elif isinstance(self.literal, str):
+            return "string"
+        else:
+            return "bool"
+
 class Boolean_literal(Node):
     def __init__(self, bool):
         Node.__init__(self)
@@ -311,6 +385,31 @@ class Boolean_literal(Node):
         return str
 
 ### General Functions
+# Create a symbol table
+class symbolTable():
+    def __init__(self):
+        self.list_context = [{}]
+        self.nbr_context = 1;
+
+    # Enter a context
+    def enter_ctx(self):
+        self.list_context.append({})
+        self.nbr_context += 1
+
+    # Bind a key to some info
+    def bind(self, key, info):
+        self.list_context[self.nbr_context-1][key] = info
+
+    # Exit a context
+    def exit_ctx(self):
+        self.list_context.pop()
+        self.nbr_context -= 1
+
+    # Look up for a key in the symbol table and retreive info,
+    # return None if the key is not found
+    def lookup(self, key):
+        return self.list_context[self.nbr_context-1].get(key)
+
 # Generate the string of a list
 def get_list_string(list):
     if(len(list)==0):
@@ -331,3 +430,28 @@ def get_object_string(name, list):
         str += el.__str__() + ", "
     str = str[:-2] + ")"
     return str
+
+# Check if a type name is primitive or not
+def isPrimitive(typeName):
+    return ((typeName == "int32") or (typeName == "bool") or (typeName == "string") or (typeName == "unit"))
+
+### Error message functions
+# Generate error message
+def error_message_node_ast(node, description, file_name, error_buffer):
+    # Generate the text of the error
+    error_str = file_name + ":" + str(node.line)
+    error_str += ":" + str(node.col)
+    error_str += ": semantic error : " + description + "\n"
+
+    # Add it to the buffer
+    error_buffer.put(((node.line, node.col), error_str))
+
+# Generate error message for a class
+def error_message_ast(line, col, description, file_name, error_buffer):
+    # Generate the text of the error
+    error_str = file_name + ":" + str(line)
+    error_str += ":" + str(col)
+    error_str += ": semantic error : " + description + "\n"
+
+    # Add it to the buffer
+    error_buffer.put(((line, col), error_str))
