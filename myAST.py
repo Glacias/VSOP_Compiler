@@ -2,7 +2,7 @@
 # General class node
 class Node:
     def __init__(self):
-        #self.checktype = ""
+        self.typeChecked = ""
         self.line = -1
         self.col = -1
 
@@ -23,6 +23,13 @@ class Program(Node):
     # Add a class to the program
     def add_class(self, c):
         self.list_class.append(c)
+
+    # Check the type of expression in the tree
+    def checkTypeTree(self, gst):
+        # For every class
+        for cl in self.list_class:
+            # Check type tree
+            cl.checkTypeTree(gst)
 
 # Class
 class Class(Node):
@@ -71,6 +78,15 @@ class Class(Node):
         self.parentLine = line
         self.parentCol = col
 
+    # Check the type of expression in the tree
+    def checkTypeTree(self, gst):
+        # For every field
+        for fl in self.fields:
+            fl.checkTypeTree(gst)
+        # For every method
+        for mt in self.methods:
+            mt.checkTypeTree(gst)
+
 # Field
 class Field(Node):
     def __init__(self, name, type):
@@ -90,6 +106,13 @@ class Field(Node):
     def add_init_expr(self, init_expr):
         self.init_expr = init_expr
 
+    # Check the type of expression in the tree
+    def checkTypeTree(self, gst):
+        if self.init_expr == "":
+            pass
+        else:
+            pass
+
 class Method(Node):
     def __init__(self, name, formals, type, block):
         Node.__init__(self)
@@ -101,6 +124,10 @@ class Method(Node):
     def __str__(self):
         str = get_object_string("Method", [self.name, self.formals, self.type, self.block])
         return str
+
+    # Check the type of expression in the tree
+    def checkTypeTree(self, gst):
+        pass
 
 class Type(Node):
     def __init__(self, type):

@@ -1,23 +1,24 @@
-class A {
+class Main {
     i : int32;
     s : string;
-    k : A;
+    k : Main;
 
-    main(i : string, s : string) : int32 { 1 }
+    main() : int32 { 2 }
 }
 
-class B extends A {
-    main(i : string, s : string) : int32 { 1 }
+class B extends Main {
+
 }
 
 class C extends B {
-
+    ok(s : C) : string { 2 }
 }
 
 class T extends Object {
     ing : int32;
     sf : string;
     ed : bool;
+    ok(s : T) : string { 2 }
 }
 
 class E extends T {

@@ -47,6 +47,10 @@ def checkSemantic(ast, file):
     # - that types in field, methods and formals exist
     checkFieldsMethodsAndFormals(ast, gst)
 
+    # Full type checking
+
+    # Check that a main class and main method was defined
+    checkForMain(ast, gst)
 
     # If errors were detected, exit
     if not error_buffer.empty():
@@ -122,7 +126,7 @@ class globalSymbolTable():
 
             # Add the class with fields and methods
             # (stored info is the class, dictonnary of fields and dictonnary of methods)
-            self.class_table[node_class.name] = (node_class, dictFields, dictMethods);
+            self.class_table[node_class.name] = (node_class, dictFields, dictMethods)
 
     # Look for a class and return the info and None if the class is not there
     def lookupForClass(self, className):
@@ -308,6 +312,29 @@ def checkFieldsMethodsAndFormals(ast, gst):
     # If errors were detected, exit
     if not error_buffer.empty():
         terminate()
+
+
+# Check for main class and method
+def checkForMain(ast, gst):
+    # Look for Main class
+    classInfo = gst.lookupForClass("Main")
+    # Check that the class exist
+    if classInfo is not None:
+        # Look for a main method
+        methodInfo = classInfo[2].get("main")
+        # Check that the method exist
+        if methodInfo is not None:
+            # Check that the return type is int32
+            if methodInfo[0].type.type != "int32":
+                error_message(methodInfo[0].line, methodInfo[0].col, "method main has a wrong return type,\n    should be int32")
+            # Check that there is no argument
+            if len(methodInfo[1]) != 0:
+                error_message(methodInfo[0].line, methodInfo[0].col, "method main must have no argument")
+        else:
+            error_message(1, 1, "method main missing in Main class")
+    else:
+        error_message(1, 1, "class Main missing")
+
 
 
 # Check that a type exist
