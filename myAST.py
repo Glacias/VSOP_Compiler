@@ -223,29 +223,33 @@ class Expr_if(Expr):
         typeThenExpr = self.then_expr.checkExpr(gst, st, file_name, error_buffer)
         # Cond expr must be of type bool
         if typeCondExpr != "bool":
-            error_message_ast(self.cond_expr.line, self.cond_expr.col, "If conditional expression must be of type bool", file_name, error_buffer)
+            error_message_ast(self.cond_expr.line, self.cond_expr.col, "IF conditional expression must be of type bool", file_name, error_buffer)
         # If then
         if self.else_expr == "" :
-            return "unit"
+            self.typeChecked = "unit"
+            return self.typeChecked
         # If then else
         else:
             # Check type for then expr
             typeElseExpr = self.else_expr.checkExpr(gst, st, file_name, error_buffer)
             # If one expr has unit type, if has unit type
             if (typeThenExpr == "unit") or (typeElseExpr == "unit"):
-                return "unit"
+                self.typeChecked = "unit"
+                return self.typeChecked
             # Types are both primitives
             elif isPrimitive(typeThenExpr) and isPrimitive(typeElseExpr):
                 # Check that both types are equal
                 if typeThenExpr == typeElseExpr:
-                    return typeThenExpr
+                    self.typeChecked = typeThenExpr
+                    return self.typeChecked
             # They are both of class type
             elif not (isPrimitive(typeThenExpr) or isPrimitive(typeElseExpr)):
                 # Return the first common ancestor
-                return gst.commonAcenstor(typeThenExpr, typeElseExpr)
+                self.typeChecked = gst.commonAcenstor(typeThenExpr, typeElseExpr)
+                return self.typeChecked
 
         # Error recovery
-        error_message_ast(self.line, self.col, "The type of the expression inside then (" + typeThenExpr + ") does not agree with expression inside else (" + typeElseExpr + ")", file_name, error_buffer)
+        error_message_ast(self.line, self.col, "IF conditional expression, the type of the expression inside THEN (" + typeThenExpr + ") does not agree with the type of the expression inside ELSE (" + typeElseExpr + ")", file_name, error_buffer)
         return "unit"
 
 class Expr_while(Expr):
@@ -256,6 +260,17 @@ class Expr_while(Expr):
 
     def __str__(self):
         return get_object_string("While", [self.cond_expr, self.body_expr])
+
+    # Check the expressions of while
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        # Check type of expr
+        typeCondExpr = self.cond_expr.checkExpr(gst, st, file_name, error_buffer)
+        typeBodyExpr = self.body_expr.checkExpr(gst, st, file_name, error_buffer)
+        # Check that cond expr is type bool
+        if typeCondExpr != "bool":
+            error_message_ast(self.cond_expr.line, self.cond_expr.col, "while conditional expression must be of type bool", file_name, error_buffer)
+        self.typeChecked = "unit"
+        return self.typeChecked
 
 class Expr_let(Expr):
     def __init__(self, name, type, scope_expr):
@@ -276,6 +291,40 @@ class Expr_let(Expr):
     def add_init_expr(self, init_expr):
         self.init_expr = init_expr
 
+    # Check the expressions of let
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        # Check that the type is valid
+        if not isPrimitive(self.type.type):
+            # Check that class type is valid
+            classInfo = gst.lookupForClass(self.type.type)
+            if classInfo is None:
+                error_message_ast(self.type.line, self.type.col, "unknown type " + self.type.type, file_name, error_buffer)
+                self.type.type = "Object" # Error recovery
+
+        # if let assign in
+        if self.init_expr != "":
+            # Look at the type of the initializer
+            typeInitExpr = self.init_expr.checkExpr(gst, st, file_name, error_buffer)
+            # Check that it conforms the type
+            if not gst.areConform(typeInitExpr, self.type.type):
+                error_message_ast(self.init_expr.line, self.init_expr.col, "the type of the initializer (" + typeInitExpr + ") must conform to the declared type of the let (" + self.type.type + ")", file_name, error_buffer)
+
+        # Check that self is not the name of the identifier
+        if self.name == "self":
+            error_message_ast(self.line, self.col, "bound identifier cannot be named self", file_name, error_buffer)
+            # Error recovery
+
+        # Create a new context
+        st.enter_ctx()
+        # Bind the identifier and type
+        st.bind(self.name, self.type.type)
+        # Check the type of the scope
+        self.typeChecked = self.scope_expr.checkExpr(gst, st, file_name, error_buffer)
+        # Exit the context
+        st.exit_ctx()
+        return self.typeChecked
+
+
 class Expr_assign(Expr):
     def __init__(self, name, expr):
         Node.__init__(self)
@@ -285,9 +334,10 @@ class Expr_assign(Expr):
         return get_object_string("Assign", [self.name, self.expr])
 
     # Check expression of assign and that it does not assign to self
+    # TODO
     def checkExpr(self, gst, st, file_name, error_buffer):
         if self.name == "self":
-            error_message_ast(self.line, self.col, "cannot assign to self")
+            error_message_ast(self.line, self.col, "cannot assign to self", file_name, error_buffer)
 
 
 class Expr_UnOp(Expr):
@@ -298,6 +348,27 @@ class Expr_UnOp(Expr):
     def __str__(self):
         return get_object_string("UnOp", [self.unop, self.expr])
 
+    # Check expression of unary operator
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        # Check type of expr
+        typeExpr = self.expr.checkExpr(gst, st, file_name, error_buffer)
+        # if unop is "not" check for bool
+        if self.unop == "not":
+            if typeExpr != "bool":
+                error_message_ast(self.line, self.col, "unary operator NOT, expression must be of type bool", file_name, error_buffer)
+                return "bool" # Error recovery : bool
+            self.typeChecked = "bool"
+        # if unop is minus check for int32
+        elif self.unop == "-":
+            if typeExpr != "int32":
+                error_message_ast(self.line, self.col, "unary MINUS operator, expression must be of type int32", file_name, error_buffer)
+                return "int32" # Error recovery : int32
+            self.typeChecked = "int32"
+        # if unop is isnull return bool
+        else:
+            self.typeChecked = "bool"
+        return self.typeChecked
+
 class Expr_BinOp(Expr):
     def __init__(self, op, left_expr, right_expr):
         Node.__init__(self)
@@ -306,6 +377,115 @@ class Expr_BinOp(Expr):
         self.right_expr = right_expr
     def __str__(self):
         return get_object_string("BinOp", [self.op, self.left_expr, self.right_expr])
+
+    # Check expression of binary operator
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        # Check type of both expr
+        typeLeftExpr = self.left_expr.checkExpr(gst, st, file_name, error_buffer)
+        typeRightExpr = self.right_expr.checkExpr(gst, st, file_name, error_buffer)
+        # And
+        if self.op ==  "and":
+            # Check that both type are bool
+            if (typeLeftExpr != "bool") or (typeRightExpr != "bool"):
+                error_message_ast(self.line, self.col, "binary operator AND, expressions must be of type bool", file_name, error_buffer)
+                return "bool"
+            else:
+                self.right_expr = "bool"
+                return self.right_expr
+
+        # Equal
+        elif self.op == "=":
+            # Types are both primitives
+            if isPrimitive(typeLeftExpr) and isPrimitive(typeRightExpr):
+                # Check that both types are equal
+                if typeLeftExpr != typeRightExpr:
+                    error_message_ast(self.line, self.col, "binary operator =, for primitive types, types of expression must be identical", file_name, error_buffer)
+                    return "bool"
+                else:
+                    self.right_expr = "bool"
+                    return self.right_expr
+            # They are both of class type
+            elif not (isPrimitive(typeLeftExpr) or isPrimitive(typeRightExpr)):
+                self.right_expr = "bool"
+                return self.right_expr
+            else:
+                error_message_ast(self.line, self.col, "binary operator =, types of expression must be identical", file_name, error_buffer)
+                return "bool"
+
+        # Lower
+        elif self.op == "<":
+            # Check that both type are int32
+            if (typeLeftExpr != "int32") or (typeRightExpr != "int32"):
+                error_message_ast(self.line, self.col, "binary operator <, expressions must be of type int32", file_name, error_buffer)
+                return "bool"
+            else:
+                self.right_expr = "bool"
+                return self.right_expr
+
+        # Lower equal
+        elif self.op == "<=":
+            # Check that both type are int32
+            if (typeLeftExpr != "int32") or (typeRightExpr != "int32"):
+                error_message_ast(self.line, self.col, "binary operator <=, expressions must be of type int32", file_name, error_buffer)
+                return "bool"
+            else:
+                self.right_expr = "bool"
+                return self.right_expr
+
+        # Plus
+        elif self.op == "+":
+            # Check that both type are int32
+            if (typeLeftExpr != "int32") or (typeRightExpr != "int32"):
+                error_message_ast(self.line, self.col, "binary operator +, expressions must be of type int32", file_name, error_buffer)
+                return "int32"
+            else:
+                self.right_expr = "int32"
+                return self.right_expr
+
+        # Minus
+        elif self.op == "-":
+            # Check that both type are int32
+            if (typeLeftExpr != "int32") or (typeRightExpr != "int32"):
+                error_message_ast(self.line, self.col, "binary operator -, expressions must be of type int32", file_name, error_buffer)
+                return "int32"
+            else:
+                self.right_expr = "int32"
+                return self.right_expr
+
+        # Times
+        elif self.op == "*":
+            # Check that both type are int32
+            if (typeLeftExpr != "int32") or (typeRightExpr != "int32"):
+                error_message_ast(self.line, self.col, "binary operator *, expressions must be of type int32", file_name, error_buffer)
+                return "int32"
+            else:
+                self.right_expr = "int32"
+                return self.right_expr
+
+        # Div
+        elif self.op == "/":
+            # Check that both type are int32
+            if (typeLeftExpr != "int32") or (typeRightExpr != "int32"):
+                error_message_ast(self.line, self.col, "binary operator /, expressions must be of type int32", file_name, error_buffer)
+                return "int32"
+            else:
+                self.right_expr = "int32"
+                return self.right_expr
+
+        # Pow
+        elif self.op == "^":
+            # Check that both type are int32
+            if (typeLeftExpr != "int32") or (typeRightExpr != "int32"):
+                error_message_ast(self.line, self.col, "binary operator ^, expressions must be of type int32", file_name, error_buffer)
+                return "int32"
+            else:
+                self.right_expr = "int32"
+                return self.right_expr
+
+        # Something went wrong
+        else:
+            error_message_ast(self.line, self.col, "Failed to recognise binary operator", file_name, error_buffer)
+            return "bool"
 
 class Expr_Call(Expr):
     def __init__(self, method_name, expr_list):
@@ -324,6 +504,16 @@ class Expr_Object_identifier(Expr):
         self.name = name
     def __str__(self):
         return self.name.__str__()
+    # Check that the variable exist
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        # Look for variable
+        varInfo = st.lookup(self.name)
+        if varInfo is None:
+            error_message_ast(self.line, self.col, "unknown variable " + self.name, file_name, error_buffer)
+            return "Object" # Error recovery
+        else:
+            self.typeChecked = varInfo
+            return self.typeChecked
 
 class Expr_New(Expr):
     def __init__(self, type_name):
@@ -331,9 +521,16 @@ class Expr_New(Expr):
         self.type_name = type_name
     def __str__(self):
         return get_object_string("New", [self.type_name])
-    # Check that the type is valid
+    # Check that the class type is valid
     def checkExpr(self, gst, st, file_name, error_buffer):
-        return self.type_name
+        # Look for class
+        classInfo = gst.lookupForClass(self.type_name)
+        if classInfo is None:
+            error_message_ast(self.line, self.col, "unknown type " + self.type_name, file_name, error_buffer)
+            return "Object" # Error recovery
+        else:
+            self.typeChecked = self.type_name
+            return self.typeChecked
 
 class Expr_Unit(Expr):
     def __init__(self):
@@ -366,11 +563,14 @@ class Literal(Node):
     # Check expression of literal
     def checkExpr(self, gst, st, file_name, error_buffer):
         if isinstance(self.literal, int):
-            return "int32"
+            self.right_expr = "int32"
+            return self.right_expr
         elif isinstance(self.literal, str):
-            return "string"
+            self.right_expr = "string"
+            return self.right_expr
         else:
-            return "bool"
+            self.right_expr = "bool"
+            return self.right_expr
 
 class Boolean_literal(Node):
     def __init__(self, bool):
@@ -383,6 +583,11 @@ class Boolean_literal(Node):
         else:
             str = "false"
         return str
+
+    # Check expression of literal
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        self.right_expr = "bool"
+        return self.right_expr
 
 ### General Functions
 # Create a symbol table
@@ -408,7 +613,12 @@ class symbolTable():
     # Look up for a key in the symbol table and retreive info,
     # return None if the key is not found
     def lookup(self, key):
-        return self.list_context[self.nbr_context-1].get(key)
+        info = self.list_context[self.nbr_context-1].get(key)
+        nbrCtx = self.nbr_context-1
+        while (info is None) and (nbrCtx>=0):
+            info = self.list_context[nbrCtx-1].get(key)
+            nbrCtx = nbrCtx-1
+        return info
 
 # Generate the string of a list
 def get_list_string(list):

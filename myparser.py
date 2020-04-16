@@ -167,11 +167,11 @@ class MyParser(object):
                 | let object_identifier colon Type assign Expr in Expr %prec let_prec_assign'''
         if(len(p)==7):
             p[0] = Expr_let(p[2], p[4], p[6])
-            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+            p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
         else:
             p[0] = Expr_let(p[2], p[4], p[8])
             p[0].add_init_expr(p[6])
-            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+            p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
 
     def p_Expr_assign(self, p):
         'Expr : object_identifier assign Expr'
@@ -200,8 +200,8 @@ class MyParser(object):
                 | Expr div Expr
                 | Expr pow Expr'''
         p[0] = Expr_BinOp(p[2], p[1], p[3])
-        p[0].add_position_from_node(p[1])
-        #p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        #p[0].add_position_from_node(p[1])
+        p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
 
     def p_Expr_Call(self, p):
         '''Expr : object_identifier lpar Args rpar
@@ -218,7 +218,7 @@ class MyParser(object):
     def p_Expr_New(self, p):
         'Expr : new type_identifier'
         p[0] = Expr_New(p[2])
-        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
 
     def p_Expr_Object_id(self, p):
         'Expr : object_identifier'

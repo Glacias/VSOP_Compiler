@@ -7,6 +7,7 @@ class Main {
 }
 
 class B extends Main {
+    test : unit <- { while false do { let v1 : string <- "2" in { if true then v1 else v1 } } };
 }
 
 class C extends B {
@@ -21,7 +22,9 @@ class T extends Object {
 }
 
 class E extends T {
-    test : E <- { if { false } then { new T } else { new F }  };
+    test : T <- { if { false } then { new T } else { new F }  };
+
+    r : unit <- { while false do { not true; 1+1; 2-2; 2<2; 1<=2; false and true; 2^4; 8/4; new Object } };
 }
 
 class F extends E {
