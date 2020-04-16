@@ -346,7 +346,7 @@ def checkFieldsMethodsAndFormals(ast, gst):
                 # First check return type
                 if not parentMethodInfo[0].type.type == mt.type.type:
                     # Write error msg
-                    error_message(mt.type.line, mt.type.col, "Could not overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    return type " + mt.type.type + " does not match the overwriten method's return type " + parentMethodInfo[0].type.type)
+                    error_message(mt.type.line, mt.type.col, "cannot overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    return type " + mt.type.type + " does not match the overwriten method's return type " + parentMethodInfo[0].type.type)
                 # And check the formals
                 # First check the size of both formals
                 parentListFormals = parentMethodInfo[0].formals.list_formals
@@ -355,12 +355,12 @@ def checkFieldsMethodsAndFormals(ast, gst):
                     # Check that formals are the same (order maters)
                     for i in range(len(listFormals)):
                         if parentListFormals[i].name != listFormals[i].name:
-                            error_message(listFormals[i].line, listFormals[i].col, "Could not overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    formal argument name " + listFormals[i].name + " does not match name " + parentListFormals[i].name)
+                            error_message(listFormals[i].line, listFormals[i].col, "cannot overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    formal argument name " + listFormals[i].name + " does not match name " + parentListFormals[i].name)
                         if parentListFormals[i].type.type != listFormals[i].type.type:
-                            error_message(listFormals[i].line, listFormals[i].col, "Could not overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    formal argument type " + listFormals[i].type.type + " does not match type " + parentListFormals[i].type.type)
+                            error_message(listFormals[i].line, listFormals[i].col, "cannot overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    formal argument type " + listFormals[i].type.type + " does not match type " + parentListFormals[i].type.type)
                 else:
                     # Write error msg
-                    error_message(mt.line, mt.col, "Could not overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    number of formal argument does not match")
+                    error_message(mt.line, mt.col, "cannot overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    number of formal argument does not match")
 
     # If errors were detected, exit
     if not error_buffer.empty():

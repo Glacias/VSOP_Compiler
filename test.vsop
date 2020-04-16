@@ -3,15 +3,16 @@ class Main {
     s : string <- { 1; "lol" };
     k : Main;
 
-    main() : int32 { 2 }
+    main() : int32 { let v2 : N in { v2 ; 2 } }
 }
 
 class B extends Main {
-    test : unit <- { while false do { let v1 : string <- "2" in { if true then v1 else v1 } } };
+    test : unit <- { while false do { let v1 : string <- "2" in { if true then v1 else {v1 <- "1"} } } };
+    ok(s : C) : int32 { let v1 : string <- "2" in { self; v1; 2 } }
 }
 
 class C extends B {
-    ok(s : C) : string { "Here is a simple string literal." }
+    ok(s : C) : int32 { 2 }
 }
 
 class T extends Object {
@@ -32,4 +33,10 @@ class F extends E {
     i : int32;
     s : string;
     selfe : bool;
+}
+
+class N {
+    i : int32 <- { 2 };
+    ok(s : string) : bool { true }
+    nice(one : string, two : T, tree : int32) : bool { one; two; tree; ok("1"); true }
 }

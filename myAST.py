@@ -86,10 +86,14 @@ class Class(Node):
     def checkTypeTree(self, gst, file_name, error_buffer):
         # For every field
         for fl in self.fields:
-            fl.checkTypeTree(gst, file_name, error_buffer)
+            fl.checkTypeField(gst, file_name, error_buffer)
+
+        # Create the self Type
+        selfType = Type(self.name)
+        selfType.add_position(self.nameLine, self.nameCol)
         # For every method
         for mt in self.methods:
-            mt.checkTypeTree(gst, file_name, error_buffer)
+            mt.checkTypeMethod(gst, selfType, file_name, error_buffer)
 
 # Field
 class Field(Node):
@@ -110,8 +114,8 @@ class Field(Node):
     def add_init_expr(self, init_expr):
         self.init_expr = init_expr
 
-    # Check the type of expression in the tree
-    def checkTypeTree(self, gst, file_name, error_buffer):
+    # Check the type of initializer expression
+    def checkTypeField(self, gst, file_name, error_buffer):
         if self.init_expr != "":
             # Create a symbol table
             st = symbolTable()
@@ -133,9 +137,31 @@ class Method(Node):
         str = get_object_string("Method", [self.name, self.formals, self.type, self.block])
         return str
 
-    # Check the type of expression in the tree
-    def checkTypeTree(self, gst, file_name, error_buffer):
-        pass
+    # Check the type of the block
+    def checkTypeMethod(self, gst, classNameType, file_name, error_buffer):
+        # Check that the declared type is valid
+        if not isPrimitive(self.type.type):
+            # Check that class type is valid
+            classInfo = gst.lookupForClass(self.type.type)
+            if classInfo is None:
+                error_message_ast(self.type.line, self.type.col, "unknown type " + self.type.type, file_name, error_buffer)
+                self.type.type = "Object" # Error recovery
+        # Create a symbol table
+        st = symbolTable()
+        # Add self
+        st.bind("self", classNameType)
+        # Get class info
+        classInfo = gst.lookupForClass(classNameType.type)
+        # Add the fields
+        st.update(classInfo[1])
+        # Add the formals
+        methodInfo = classInfo[2].get(self.name)
+        st.update(methodInfo[1])
+        # Check the type of the block
+        typeBlock = self.block.checkExpr(gst, st, file_name, error_buffer)
+        # Check that it conform the declared type
+        if not gst.areConform(typeBlock, self.type.type):
+            error_message_ast(self.type.line, self.type.col, "the type of the method's body (" + typeBlock + ") must conform to the declared type of the method (" + self.type.type + ")", file_name, error_buffer)
 
 class Type(Node):
     def __init__(self, type):
@@ -317,7 +343,7 @@ class Expr_let(Expr):
         # Create a new context
         st.enter_ctx()
         # Bind the identifier and type
-        st.bind(self.name, self.type.type)
+        st.bind(self.name, self.type)
         # Check the type of the scope
         self.typeChecked = self.scope_expr.checkExpr(gst, st, file_name, error_buffer)
         # Exit the context
@@ -334,11 +360,24 @@ class Expr_assign(Expr):
         return get_object_string("Assign", [self.name, self.expr])
 
     # Check expression of assign and that it does not assign to self
-    # TODO
     def checkExpr(self, gst, st, file_name, error_buffer):
+        # Check it does not assign to self
         if self.name == "self":
             error_message_ast(self.line, self.col, "cannot assign to self", file_name, error_buffer)
-
+        # Get the type of identifier
+        infoId = st.lookup(self.name)
+        # Check it exist
+        if infoId is None:
+            error_message_ast(self.line, self.col, "unknown variable " + self.name, file_name, error_buffer)
+            return "Object" # Error recovery
+        # Check the type of the expr
+        typeExpr = self.expr.checkExpr(gst, st, file_name, error_buffer)
+        # Check that types are conform
+        if not gst.areConform(typeExpr, infoId.type):
+            error_message_ast(self.line, self.col, "cannot assign identifier " + self.name + " with declared type (" + infoId.type + ") as assigned expression type (" + typeExpr + ") does not conform", file_name, error_buffer)
+            return infoId.type # Error recovery
+        self.typeChecked = infoId.type
+        return self.typeChecked
 
 class Expr_UnOp(Expr):
     def __init__(self, unop, expr):
@@ -488,15 +527,70 @@ class Expr_BinOp(Expr):
             return "bool"
 
 class Expr_Call(Expr):
-    def __init__(self, method_name, expr_list):
+    def __init__(self, method_name, args):
         Node.__init__(self)
         self.object_expr = "self"
         self.method_name = method_name
-        self.expr_list = expr_list
+        self.args = args
     def __str__(self):
-        return get_object_string("Call", [self.object_expr, self.method_name, self.expr_list])
+        return get_object_string("Call", [self.object_expr, self.method_name, self.args])
     def add_object_expr(self, expr):
         self.object_expr = expr
+
+    # Check the type of the call
+    def checkExpr(self, gst, st, file_name, error_buffer):
+        # In case of deduced self, check the type of self
+        if self.object_expr == "self":
+            # Check that self is in scope
+            selfInfo = st.lookup("self")
+            if selfInfo is None:
+                error_message_ast(self.line, self.col, "cannot access self inside field initializer", file_name, error_buffer)
+                return "Object" # Error recovery
+            else:
+                # Get the type of the object expr
+                typeObjectExpr = selfInfo.type
+        else:
+            # Check the type of the object expr
+            typeObjectExpr = self.object_expr.checkExpr(gst, st, file_name, error_buffer)
+
+        # Check that the identifier as a class type
+        if isPrimitive(typeObjectExpr):
+            error_message_ast(self.line, self.col, "cannot call on a primitive type", file_name, error_buffer)
+            return "Object" # Error recovery
+
+        # Get class info
+        classInfo = gst.lookupForClass(typeObjectExpr)
+        # Check that class info exist
+        if classInfo is None:
+            #error_message_ast(self.line, self.col, "called on invalid object (probably self)", file_name, error_buffer)
+            # currently catches wrong self. in field
+            return "Object" # Error recovery
+
+        # Get method info
+        methodInfo = gst.lookupMethodsAncestors(classInfo[0], self.method_name)[0]
+        # Check that the method exist for that class type (also in the ancestor)
+        if methodInfo is None:
+            error_message_ast(self.line, self.col, "class " + typeObjectExpr + " has no method called " + self.method_name, file_name, error_buffer)
+            return "Object" # Error recovery
+
+        # Get the arguments and formals
+        list_arg = self.args.list_args
+        list_formals = methodInfo[0].formals.list_formals
+
+        # First check that there is the same number of args and formals
+        if len(list_arg) != len(list_formals):
+            error_message_ast(self.line, self.col, "method " + self.method_name + " takes " + str(len(list_formals)) + " argument but " + str(len(list_arg)) + " were given", file_name, error_buffer)
+
+        # Check that arguments are the same type (order maters)
+        for i in range(len(list_arg)):
+            # Check type of argument
+            typeArg = list_arg[i].checkExpr(gst, st, file_name, error_buffer)
+            # Check that types match
+            if typeArg != list_formals[i].type.type:
+                error_message_ast(list_arg[i].line, list_arg[i].col, "argument " + list_formals[i].name + " (at position " + str(i+1) + ") should be of type " + list_formals[i].type.type, file_name, error_buffer)
+
+        self.right_expr = methodInfo[0].type.type
+        return self.right_expr
 
 class Expr_Object_identifier(Expr):
     def __init__(self, name):
@@ -509,10 +603,13 @@ class Expr_Object_identifier(Expr):
         # Look for variable
         varInfo = st.lookup(self.name)
         if varInfo is None:
-            error_message_ast(self.line, self.col, "unknown variable " + self.name, file_name, error_buffer)
-            return "Object" # Error recovery
+            if self.name == "self":
+                error_message_ast(self.line, self.col, "cannot access self inside field initializer", file_name, error_buffer)
+            else:
+                error_message_ast(self.line, self.col, "unknown variable " + self.name, file_name, error_buffer)
+                return "Object" # Error recovery
         else:
-            self.typeChecked = varInfo
+            self.typeChecked = varInfo.type
             return self.typeChecked
 
 class Expr_New(Expr):
@@ -619,6 +716,10 @@ class symbolTable():
             info = self.list_context[nbrCtx-1].get(key)
             nbrCtx = nbrCtx-1
         return info
+
+    # Update the context with the content of a dictonnary
+    def update(self, dict):
+        self.list_context[self.nbr_context-1].update(dict)
 
 # Generate the string of a list
 def get_list_string(list):
