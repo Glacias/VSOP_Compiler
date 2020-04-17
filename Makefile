@@ -12,7 +12,7 @@ vsopc:
 		--onefile main.py \
 		--distpath ./ \
 		--clean \
-		--onefile \
 		--name vsopc \
 		--specpath ./build \
 		--workpath ./build \
+		--add-file parsetab.py:parsetab.py \

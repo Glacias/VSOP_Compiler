@@ -453,8 +453,8 @@ class Expr_BinOp(Expr):
                 error_message_ast(self.line, self.col, "binary operator AND, expressions must be of type bool", file_name, error_buffer)
                 return "bool"
             else:
-                self.right_expr = "bool"
-                return self.right_expr
+                self.typeChecked = "bool"
+                return self.typeChecked
 
         # Equal
         elif self.op == "=":
@@ -465,12 +465,12 @@ class Expr_BinOp(Expr):
                     error_message_ast(self.line, self.col, "binary operator =, for primitive types, types of expression must be identical", file_name, error_buffer)
                     return "bool"
                 else:
-                    self.right_expr = "bool"
-                    return self.right_expr
+                    self.typeChecked = "bool"
+                    return self.typeChecked
             # They are both of class type
             elif not (isPrimitive(typeLeftExpr) or isPrimitive(typeRightExpr)):
-                self.right_expr = "bool"
-                return self.right_expr
+                self.typeChecked = "bool"
+                return self.typeChecked
             else:
                 error_message_ast(self.line, self.col, "binary operator =, types of expression must be identical", file_name, error_buffer)
                 return "bool"
@@ -482,8 +482,8 @@ class Expr_BinOp(Expr):
                 error_message_ast(self.line, self.col, "binary operator <, expressions must be of type int32", file_name, error_buffer)
                 return "bool"
             else:
-                self.right_expr = "bool"
-                return self.right_expr
+                self.typeChecked = "bool"
+                return self.typeChecked
 
         # Lower equal
         elif self.op == "<=":
@@ -492,8 +492,8 @@ class Expr_BinOp(Expr):
                 error_message_ast(self.line, self.col, "binary operator <=, expressions must be of type int32", file_name, error_buffer)
                 return "bool"
             else:
-                self.right_expr = "bool"
-                return self.right_expr
+                self.typeChecked = "bool"
+                return self.typeChecked
 
         # Plus
         elif self.op == "+":
@@ -502,8 +502,8 @@ class Expr_BinOp(Expr):
                 error_message_ast(self.line, self.col, "binary operator +, expressions must be of type int32", file_name, error_buffer)
                 return "int32"
             else:
-                self.right_expr = "int32"
-                return self.right_expr
+                self.typeChecked = "int32"
+                return self.typeChecked
 
         # Minus
         elif self.op == "-":
@@ -512,8 +512,8 @@ class Expr_BinOp(Expr):
                 error_message_ast(self.line, self.col, "binary operator -, expressions must be of type int32", file_name, error_buffer)
                 return "int32"
             else:
-                self.right_expr = "int32"
-                return self.right_expr
+                self.typeChecked = "int32"
+                return self.typeChecked
 
         # Times
         elif self.op == "*":
@@ -522,8 +522,8 @@ class Expr_BinOp(Expr):
                 error_message_ast(self.line, self.col, "binary operator *, expressions must be of type int32", file_name, error_buffer)
                 return "int32"
             else:
-                self.right_expr = "int32"
-                return self.right_expr
+                self.typeChecked = "int32"
+                return self.typeChecked
 
         # Div
         elif self.op == "/":
@@ -532,8 +532,8 @@ class Expr_BinOp(Expr):
                 error_message_ast(self.line, self.col, "binary operator /, expressions must be of type int32", file_name, error_buffer)
                 return "int32"
             else:
-                self.right_expr = "int32"
-                return self.right_expr
+                self.typeChecked = "int32"
+                return self.typeChecked
 
         # Pow
         elif self.op == "^":
@@ -542,8 +542,8 @@ class Expr_BinOp(Expr):
                 error_message_ast(self.line, self.col, "binary operator ^, expressions must be of type int32", file_name, error_buffer)
                 return "int32"
             else:
-                self.right_expr = "int32"
-                return self.right_expr
+                self.typeChecked = "int32"
+                return self.typeChecked
 
         # Something went wrong
         else:
@@ -617,8 +617,8 @@ class Expr_Call(Expr):
             if typeArg != list_formals[i].type.type:
                 error_message_ast(list_arg[i].line, list_arg[i].col, "argument " + list_formals[i].name + " (at position " + str(i+1) + ") should be of type " + list_formals[i].type.type, file_name, error_buffer)
 
-        self.right_expr = methodInfo[0].type.type
-        return self.right_expr
+        self.typeChecked = methodInfo[0].type.type
+        return self.typeChecked
 
 class Expr_Object_identifier(Expr):
     def __init__(self, name):
@@ -700,14 +700,14 @@ class Literal(Node):
     # Check expression of literal
     def checkExpr(self, gst, st, file_name, error_buffer):
         if isinstance(self.literal, int):
-            self.right_expr = "int32"
-            return self.right_expr
+            self.typeChecked = "int32"
+            return self.typeChecked
         elif isinstance(self.literal, str):
-            self.right_expr = "string"
-            return self.right_expr
+            self.typeChecked = "string"
+            return self.typeChecked
         else:
-            self.right_expr = "bool"
-            return self.right_expr
+            self.typeChecked = "bool"
+            return self.typeChecked
 
 class Boolean_literal(Node):
     def __init__(self, bool):
@@ -724,8 +724,8 @@ class Boolean_literal(Node):
         return str
     # Check expression of literal
     def checkExpr(self, gst, st, file_name, error_buffer):
-        self.right_expr = "bool"
-        return self.right_expr
+        self.typeChecked = "bool"
+        return self.typeChecked
 
 ### General Functions
 # Create a symbol table
