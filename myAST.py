@@ -87,7 +87,6 @@ class Class(Node):
         # For every field
         for fl in self.fields:
             fl.checkTypeField(gst, file_name, error_buffer)
-
         # Create the self Type
         selfType = Type(self.name)
         selfType.add_position(self.nameLine, self.nameCol)
@@ -203,6 +202,9 @@ class Block(Node):
             str = self.list_expr[0].__str__()
         else:
             str = get_list_string(self.list_expr)
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
         return str
 
     def add_expr(self, expr):
@@ -237,6 +239,9 @@ class Expr_if(Expr):
             str = get_object_string("If", [self.cond_expr, self.then_expr])
         else:
             str = get_object_string("If", [self.cond_expr, self.then_expr, self.else_expr])
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
         return str
 
     def add_else_expr(self, expr):
@@ -285,7 +290,11 @@ class Expr_while(Expr):
         self.body_expr = body_expr
 
     def __str__(self):
-        return get_object_string("While", [self.cond_expr, self.body_expr])
+        str = get_object_string("While", [self.cond_expr, self.body_expr])
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
+        return str
 
     # Check the expressions of while
     def checkExpr(self, gst, st, file_name, error_buffer):
@@ -311,6 +320,9 @@ class Expr_let(Expr):
             str = get_object_string("Let", [self.name, self.type, self.scope_expr])
         else:
             str = get_object_string("Let", [self.name, self.type, self.init_expr, self.scope_expr])
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
         return str
 
     # Add init expr
@@ -357,7 +369,11 @@ class Expr_assign(Expr):
         self.name = name
         self.expr = expr
     def __str__(self):
-        return get_object_string("Assign", [self.name, self.expr])
+        str = get_object_string("Assign", [self.name, self.expr])
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
+        return str
 
     # Check expression of assign and that it does not assign to self
     def checkExpr(self, gst, st, file_name, error_buffer):
@@ -385,7 +401,11 @@ class Expr_UnOp(Expr):
         self.unop = unop
         self.expr = expr
     def __str__(self):
-        return get_object_string("UnOp", [self.unop, self.expr])
+        str = get_object_string("UnOp", [self.unop, self.expr])
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
+        return str
 
     # Check expression of unary operator
     def checkExpr(self, gst, st, file_name, error_buffer):
@@ -415,7 +435,11 @@ class Expr_BinOp(Expr):
         self.left_expr = left_expr
         self.right_expr = right_expr
     def __str__(self):
-        return get_object_string("BinOp", [self.op, self.left_expr, self.right_expr])
+        str = get_object_string("BinOp", [self.op, self.left_expr, self.right_expr])
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
+        return str
 
     # Check expression of binary operator
     def checkExpr(self, gst, st, file_name, error_buffer):
@@ -533,7 +557,11 @@ class Expr_Call(Expr):
         self.method_name = method_name
         self.args = args
     def __str__(self):
-        return get_object_string("Call", [self.object_expr, self.method_name, self.args])
+        str = get_object_string("Call", [self.object_expr, self.method_name, self.args])
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
+        return str
     def add_object_expr(self, expr):
         self.object_expr = expr
 
@@ -597,7 +625,11 @@ class Expr_Object_identifier(Expr):
         Node.__init__(self)
         self.name = name
     def __str__(self):
-        return self.name.__str__()
+        str = self.name.__str__()
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
+        return str
     # Check that the variable exist
     def checkExpr(self, gst, st, file_name, error_buffer):
         # Look for variable
@@ -617,7 +649,11 @@ class Expr_New(Expr):
         Node.__init__(self)
         self.type_name = type_name
     def __str__(self):
-        return get_object_string("New", [self.type_name])
+        str = get_object_string("New", [self.type_name])
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
+        return str
     # Check that the class type is valid
     def checkExpr(self, gst, st, file_name, error_buffer):
         # Look for class
@@ -634,8 +670,11 @@ class Expr_Unit(Expr):
         Node.__init__(self)
         self.unit = "()"
     def __str__(self):
-        return self.unit.__str__()
-
+        str = self.unit.__str__()
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
+        return str
     def checkExpr(self, gst, st, file_name, error_buffer):
         return "unit"
 
@@ -652,11 +691,12 @@ class Literal(Node):
     def __init__(self, literal):
         Node.__init__(self)
         self.literal = literal
-
     def __str__(self):
         str = self.literal.__str__()
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
         return str
-
     # Check expression of literal
     def checkExpr(self, gst, st, file_name, error_buffer):
         if isinstance(self.literal, int):
@@ -673,14 +713,15 @@ class Boolean_literal(Node):
     def __init__(self, bool):
         Node.__init__(self)
         self.bool = bool
-
     def __str__(self):
         if(self.bool):
             str = "true"
         else:
             str = "false"
+        # In case the type was checked print it
+        if self.typeChecked != "":
+            str += " : " + self.typeChecked
         return str
-
     # Check expression of literal
     def checkExpr(self, gst, st, file_name, error_buffer):
         self.right_expr = "bool"
