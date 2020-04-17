@@ -99,11 +99,11 @@ class globalSymbolTable():
 
             # Fill methods
             for method_class in node_class.methods:
-                # Check for already defined fields
+                # Check for already defined methods
                 if method_class.name in dictMethods:
                     # Write the error
                     oldMethod = dictMethods[method_class.name]
-                    error_message(method_class.line, method_class.col, "field " + method_class.name + " was already defined at " + str(oldMethod.line) + ":" + str(oldMethod.col) + ".")
+                    error_message(method_class.line, method_class.col, "redefinition of method " + method_class.name + ",\n    first defined at " + str(oldMethod[0].line) + ":" + str(oldMethod[0].col) + ".")
                 else:
                     # Create a dictonnary for formals
                     dictFormals = {}
@@ -410,33 +410,33 @@ def class_Object():
     printF1 = Formal("s", Type("string"))
     printFormals = Formals()
     printFormals.add_formal(printF1)
-    print = Method("print", printFormals, "Obejct", "{ (* print s on stdout, then return self *) }")
+    print = Method("print", printFormals, Type("Object"), "{ (* print s on stdout, then return self *) }")
     obj.add_method(print)
 
     # printBool
     printBoolF1 = Formal("b", Type("bool"))
     printBoolFormals = Formals()
     printBoolFormals.add_formal(printBoolF1)
-    printBool = Method("printBool", printBoolFormals, "Obejct", "{ (* print b on stdout, then return self *) }")
+    printBool = Method("printBool", printBoolFormals, Type("Object"), "{ (* print b on stdout, then return self *) }")
     obj.add_method(printBool)
 
     # printInt32
     printInt32F1 = Formal("i", Type("int32"))
     printInt32Formals = Formals()
     printInt32Formals.add_formal(printInt32F1)
-    printInt32 = Method("printInt32", printInt32Formals, "Obejct", "{ (* print b on stdout, then return self *) }")
+    printInt32 = Method("printInt32", printInt32Formals, Type("Object"), "{ (* print b on stdout, then return self *) }")
     obj.add_method(printInt32)
 
     # inputLine
-    inputLine = Method("inputLine", Formals(), "string", "{ (* read one line from stdin, return \"\" in case of error *) }")
+    inputLine = Method("inputLine", Formals(), Type("string"), "{ (* read one line from stdin, return \"\" in case of error *) }")
     obj.add_method(inputLine)
 
     # inputBool
-    inputBool = Method("inputBool", Formals(), "bool", "{ (* read one boolean value from stdin, exit with error message in case of error *) }")
+    inputBool = Method("inputBool", Formals(), Type("bool"), "{ (* read one boolean value from stdin, exit with error message in case of error *) }")
     obj.add_method(inputBool)
 
     # inputLine
-    inputInt32 = Method("inputInt32", Formals(), "int32", "{ (* read one integer from stdin, exit with error message in case of error *) }")
+    inputInt32 = Method("inputInt32", Formals(), Type("int32"), "{ (* read one integer from stdin, exit with error message in case of error *) }")
     obj.add_method(inputInt32)
 
     return obj

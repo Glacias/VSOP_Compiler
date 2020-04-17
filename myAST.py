@@ -151,9 +151,15 @@ class Method(Node):
         st.bind("self", classNameType)
         # Get class info
         classInfo = gst.lookupForClass(classNameType.type)
-        # Add the fields
-        st.update(classInfo[1])
-        # Add the formals
+        ## Add the fields (also ancestor fields)
+        # For every ancestor (including itself)
+        for clName in classInfo[3]:
+            # Get the ancestor info
+            anceClassInfo = gst.lookupForClass(clName)
+            # Add the fields
+            for fl in anceClassInfo[0].fields:
+                st.bind(fl.name, fl.type)
+        ## Add the formals
         methodInfo = classInfo[2].get(self.name)
         st.update(methodInfo[1])
         # Check the type of the block
@@ -202,6 +208,9 @@ class Block(Node):
             str = self.list_expr[0].__str__()
         else:
             str = get_list_string(self.list_expr)
+            # In case the type was checked print it
+            if self.typeChecked != "":
+                str += " : " + self.typeChecked
         return str
 
     def add_expr(self, expr):
@@ -420,8 +429,11 @@ class Expr_UnOp(Expr):
                 error_message_ast(self.line, self.col, "unary MINUS operator, expression must be of type int32", file_name, error_buffer)
                 return "int32" # Error recovery : int32
             self.typeChecked = "int32"
-        # if unop is isnull return bool
+        # if unop is isnull check for class type
         else:
+            if isPrimitive(typeExpr):
+                error_message_ast(self.line, self.col, "unary ISNULL operator, expression must be of type Object", file_name, error_buffer)
+                return "bool" # Error recovery : bool
             self.typeChecked = "bool"
         return self.typeChecked
 
@@ -572,6 +584,12 @@ class Expr_Call(Expr):
                 error_message_ast(self.line, self.col, "cannot access self inside field initializer", file_name, error_buffer)
                 return "Object" # Error recovery
             else:
+                # Create the self
+                selfExpr = Expr_Object_identifier("self")
+                selfExpr.add_position(self.line,self.col)
+                selfExpr.typeChecked = selfInfo.type
+                # Change the expression object expr to self
+                self.object_expr = selfExpr
                 # Get the type of the object expr
                 typeObjectExpr = selfInfo.type
         else:
@@ -610,9 +628,9 @@ class Expr_Call(Expr):
         for i in range(len(list_arg)):
             # Check type of argument
             typeArg = list_arg[i].checkExpr(gst, st, file_name, error_buffer)
-            # Check that types match
-            if typeArg != list_formals[i].type.type:
-                error_message_ast(list_arg[i].line, list_arg[i].col, "argument " + list_formals[i].name + " (at position " + str(i+1) + ") should be of type " + list_formals[i].type.type, file_name, error_buffer)
+            # Check that types are conform
+            if not gst.areConform(typeArg, list_formals[i].type.type):
+                error_message_ast(list_arg[i].line, list_arg[i].col, "argument " + list_formals[i].name + " (at position " + str(i+1) + ") should conform type " + list_formals[i].type.type + " (currently is of type " + typeArg + ")", file_name, error_buffer)
 
         self.typeChecked = methodInfo[0].type.type
         return self.typeChecked
