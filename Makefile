@@ -15,4 +15,4 @@ vsopc:
 		--name vsopc \
 		--specpath ./build \
 		--workpath ./build \
-		--add-file parsetab.py:parsetab.py \
+		--add-data ../parsetab.py:/ \

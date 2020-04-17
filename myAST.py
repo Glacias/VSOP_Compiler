@@ -202,9 +202,6 @@ class Block(Node):
             str = self.list_expr[0].__str__()
         else:
             str = get_list_string(self.list_expr)
-        # In case the type was checked print it
-        if self.typeChecked != "":
-            str += " : " + self.typeChecked
         return str
 
     def add_expr(self, expr):
@@ -676,7 +673,8 @@ class Expr_Unit(Expr):
             str += " : " + self.typeChecked
         return str
     def checkExpr(self, gst, st, file_name, error_buffer):
-        return "unit"
+        self.typeChecked = "unit"
+        return self.typeChecked
 
 class Args(Node):
     def __init__(self):

@@ -1,0 +1,42 @@
+class Main {
+    i : int32 <- { 1; 2 };
+    s : string <- { 1; "lol" };
+    k : Main;
+
+    main() : int32 { let v2 : N in { v2 ; 2 } }
+}
+
+class B extends Main {
+    test : unit <- { while false do { let v1 : string <- "2" in { if true then v1 else {v1 <- "1"} } } };
+    ok(s : C) : int32 { let v1 : string <- "2" in { self; v1; 2 } }
+}
+
+class C extends B {
+    oki(s : int32) : int32 { s ; let a : int32 <- 2 in { a }}
+}
+
+class T extends Object {
+    ing : int32;
+    sf : string;
+    ed : bool;
+    ok(s : T) : bool { true }
+}
+
+class E extends T {
+    test : T <- { if { false } then { new T } else { new F }  };
+
+    r : unit <- { while false do { not true; 1+1; 2-2; 2<2; 1<=2; false and true; 2^4; 8/4; new Object } };
+}
+
+class F extends E {
+    test2 : Object <- { if { false } then { new E } else { new F }  };
+    i : int32;
+    s : string;
+    selfe : bool;
+}
+
+class N {
+    i : int32 <- { 2 };
+    ok(s : string) : bool { true }
+    nice(one : string, two : T, tree : int32) : bool { one; two; tree; ok("1"); true }
+}
