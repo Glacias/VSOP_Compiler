@@ -352,10 +352,8 @@ def checkFieldsMethodsAndFormals(ast, gst):
                 parentListFormals = parentMethodInfo[0].formals.list_formals
                 listFormals = mt.formals.list_formals
                 if len(parentListFormals) == len(listFormals):
-                    # Check that formals are the same (order maters)
+                    # Check that formals are the same type (order maters)
                     for i in range(len(listFormals)):
-                        if parentListFormals[i].name != listFormals[i].name:
-                            error_message(listFormals[i].line, listFormals[i].col, "cannot overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    formal argument name " + listFormals[i].name + " does not match name " + parentListFormals[i].name)
                         if parentListFormals[i].type.type != listFormals[i].type.type:
                             error_message(listFormals[i].line, listFormals[i].col, "cannot overwrite method " + mt.name + " defined at " + str(parentMethodInfo[0].line) + ":" + str(parentMethodInfo[0].col) + ",\n    formal argument type " + listFormals[i].type.type + " does not match type " + parentListFormals[i].type.type)
                 else:
