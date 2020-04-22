@@ -16,6 +16,7 @@ if __name__ == '__main__':
     parser_arg.add_argument('-lex', help='Path to the input VSOP source code for lexical analysis')
     parser_arg.add_argument('-parse', help='Path to the input VSOP source code for syntax analysis')
     parser_arg.add_argument('-check', help='Path to the input VSOP source code for semantic analysis')
+    parser_arg.add_argument('-llvm', help='Path to the input VSOP source code for generating the LLVM IR')
     args = parser_arg.parse_args()
 
     # Check for path
@@ -96,8 +97,37 @@ if __name__ == '__main__':
         ast = mypars.parser.parse(data)
 
         # Check semantic
-        updatedAst = checkSemantic(ast, file_name)
+        updatedAstInfo = checkSemantic(ast, file_name)
+        print(updatedAstInfo[0])
+
+    elif args.llvm:
+        # Set file_name
+        file_name = args.llvm.split('\\')[-1:][0]
+
+        # Create lexer
+        mylex = MyLexer(file_name)
+        mylex.build() # Build the lexer
+        mylex.lexer.line_end_pos = -1
+        mylex.lexer.line_end_pos_table = [0]
+
+        # Create parser
+        mypars = MyParser(mylex, file_name)
+        mypars.build(debug=False) # Build the parser
+
+        # Give the parser some input
+        f = open(args.llvm, "r")
+        data = f.read()
+        ast = mypars.parser.parse(data)
+
+        # Check semantic
+        updatedAstInfo = checkSemantic(ast, file_name)
+        updatedAst = updatedAstInfo[0]
+        gst = updatedAstInfo[1]
+
+        # Generate LLVM IR
+
         print(updatedAst)
+        print(gst)
 
     else:
         sys.stderr.write("Argument missing : Path to the input VSOP source code.\n")

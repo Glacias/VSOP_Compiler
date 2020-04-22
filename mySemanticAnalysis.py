@@ -58,7 +58,7 @@ def checkSemantic(ast, file):
     if not error_buffer.empty():
         terminate()
 
-    return ast
+    return (ast, gst)
 
 
 # Create a global symbol table
