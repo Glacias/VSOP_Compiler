@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # mySemanticAnalysis.py
 #
-# File responsible for the syntax analysis
+# File responsible for the semantic analysis
 # Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
 # University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
 # -----------------------------------------------------------------------------
@@ -124,7 +124,7 @@ class globalSymbolTable():
 
                     # Add the method with formals
                     # (stored info is the method and dictonnary of formals)
-                    dictMethods[method_class.name] = (method_class, dictFormals)
+                    dictMethods[method_class.name] = [method_class, dictFormals, []]
 
             # Add the class with fields and methods
             # (stored info is the class, dictonnary of fields and dictonnary of methods)
@@ -433,7 +433,7 @@ def class_Object():
     inputBool = Method("inputBool", Formals(), Type("bool"), "{ (* read one boolean value from stdin, exit with error message in case of error *) }")
     obj.add_method(inputBool)
 
-    # inputLine
+    # inputInt32
     inputInt32 = Method("inputInt32", Formals(), Type("int32"), "{ (* read one integer from stdin, exit with error message in case of error *) }")
     obj.add_method(inputInt32)
 

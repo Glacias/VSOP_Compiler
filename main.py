@@ -9,6 +9,7 @@ import sys
 from mylexer import *
 from myparser import *
 from mySemanticAnalysis import *
+from myLLVMGenerator import *
 
 if __name__ == '__main__':
     # Parsing arguments
@@ -125,9 +126,17 @@ if __name__ == '__main__':
         gst = updatedAstInfo[1]
 
         # Generate LLVM IR
+        codeStr = generateLLVM(updatedAst, gst, file_name)
 
-        print(updatedAst)
-        print(gst)
+        # Append to object.ll
+        fObject = open("object.ll", "r")
+        objectCode = fObject.read()
+        codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
+
+        # Create a file that will old the llvm code string
+        codefile = open("llvmTest.ll", "w")
+        codefile.write(codeStr)
+        codefile.close()
 
     else:
         sys.stderr.write("Argument missing : Path to the input VSOP source code.\n")

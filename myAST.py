@@ -1,3 +1,5 @@
+from llvmlite import ir
+
 ##### Classes for AST
 # General class node
 class Node:
@@ -34,6 +36,14 @@ class Program(Node):
         for cl in self.list_class:
             # Check type tree
             cl.checkTypeTree(gst, file_name, error_buffer)
+
+    # Generate code for the program
+    def codeGen(self, lgen):
+        # For every class
+        for cl in self.list_class:
+            # Generate the code
+            cl.codeGen(lgen)
+
 
 # Class
 class Class(Node):
@@ -94,6 +104,21 @@ class Class(Node):
         for mt in self.methods:
             mt.checkTypeMethod(gst, selfType, file_name, error_buffer)
 
+    # Generate code for the class
+    def codeGen(self, lgen):
+        # Create init
+
+        # For every field
+        for fl in self.fields:
+            fl.codeGen(lgen, self.name)
+
+        # Create new
+
+        # For every method
+        for mt in self.methods:
+            mt.codeGen(lgen, self.name)
+
+
 # Field
 class Field(Node):
     def __init__(self, name, type):
@@ -123,6 +148,10 @@ class Field(Node):
             # Check that the initializer type corresponds to the field type
             if not gst.areConform(typeExpr, self.type.type):
                 error_message_ast(self.type.line, self.type.col, "the type of the initializer (" + typeExpr + ") must conform to the declared type of the field (" + self.type.type + ")", file_name, error_buffer)
+
+    # Generate code for the field
+    def codeGen(self, lgen, className):
+        pass
 
 class Method(Node):
     def __init__(self, name, formals, type, block):
@@ -167,6 +196,27 @@ class Method(Node):
         # Check that it conform the declared type
         if not gst.areConform(typeBlock, self.type.type):
             error_message_ast(self.type.line, self.type.col, "the type of the method's body (" + typeBlock + ") must conform to the declared type of the method (" + self.type.type + ")", file_name, error_buffer)
+
+    # Generate code for the method
+    def codeGen(self, lgen, className):
+        # Get the class init info
+        clInitDictInfo = lgen.initDict.get(className)
+        # Get the method info
+        metInitDictInfo = clInitDictInfo[3][self.name]
+        # Get the method declaration and create the first block
+        block = metInitDictInfo[2].append_basic_block()
+        # Create the builder on that block
+        bldr = ir.IRBuilder(block)
+
+        # Create a symbol table for the arguments and fields (and self)
+        st = symbolTable()
+
+        # Launch the builder on the block
+        value = self.block.codeGenExpr(lgen, className, bldr, st)
+
+        # Return the value
+        bldr.ret(value)
+
 
 class Type(Node):
     def __init__(self, type):
@@ -228,6 +278,18 @@ class Block(Node):
         # Exit the context
         st.exit_ctx()
         return self.typeChecked
+
+    # Generate code for a block
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Open a new context
+        st.enter_ctx()
+        # Generate the code for all the expr
+        for exp in self.list_expr:
+            value = exp.codeGenExpr(lgen, className, bldr, st)
+        # Exit the context
+        st.exit_ctx()
+        # Return the value of the last expr
+        return value
 
 ## Expressions
 class Expr(Node):
@@ -724,6 +786,37 @@ class Literal(Node):
         else:
             self.typeChecked = "bool"
             return self.typeChecked
+
+    # Generate code for a literal
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # int
+        if isinstance(self.literal, int):
+            return lgen.int32(self.literal)
+
+        # str
+        elif isinstance(self.literal, str):
+            # Add the null char at the end
+            string1 = self.literal[1:-1] + '\0'
+
+            # Create a global constant
+            c_string1 = ir.Constant(ir.ArrayType(ir.IntType(8), len(string1)), bytearray(string1.encode("utf8")))
+            global_string1 = ir.GlobalVariable(lgen.module, c_string1.type, name=("str" + str(lgen.nbrStr)))
+            lgen.nbrStr = lgen.nbrStr + 1
+            global_string1.linkage = ''
+            global_string1.global_constant = True
+            global_string1.initializer = c_string1
+
+            # Return a pointer to the global constant
+            pt = bldr.gep(global_string1, [lgen.int32(0), lgen.int32(0)], inbounds=True)
+            return pt
+
+        # bool
+        else:
+            if self.literal.bool == "true":
+                return lgen.bool(1)
+            else:
+                return lgen.bool(0)
+
 
 class Boolean_literal(Node):
     def __init__(self, bool):
