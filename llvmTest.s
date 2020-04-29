@@ -467,28 +467,269 @@ skip_while:                             # @skip_while
 	.size	skip_while, .Lfunc_end10-skip_while
 	.cfi_endproc
                                         # -- End function
+	.globl	D_new                   # -- Begin function D_new
+	.p2align	4, 0x90
+	.type	D_new,@function
+D_new:                                  # @D_new
+	.cfi_startproc
+# %bb.0:                                # %.2
+	pushq	%rax
+	.cfi_def_cfa_offset 16
+	movl	$16, %edi
+	callq	malloc
+	movq	%rax, %rdi
+	callq	D_init
+	popq	%rcx
+	.cfi_def_cfa_offset 8
+	retq
+.Lfunc_end11:
+	.size	D_new, .Lfunc_end11-D_new
+	.cfi_endproc
+                                        # -- End function
+	.globl	D_init                  # -- Begin function D_init
+	.p2align	4, 0x90
+	.type	D_init,@function
+D_init:                                 # @D_init
+	.cfi_startproc
+# %bb.0:                                # %.3
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	pushq	%r14
+	pushq	%rbx
+	.cfi_offset %rbx, -32
+	.cfi_offset %r14, -24
+	movq	%rdi, %rbx
+	testq	%rdi, %rdi
+	je	.LBB12_2
+# %bb.1:                                # %.3.if
+	movq	%rbx, %rdi
+	callq	Object_init
+	movq	$D_vtable, (%rbx)
+	movq	%rsp, %r14
+	leaq	-16(%r14), %rsp
+	callq	Object_new
+	movq	%rax, -16(%r14)
+	movq	(%rax), %rcx
+	movl	$str0, %esi
+	movq	%rax, %rdi
+	callq	*(%rcx)
+	movq	%rsp, %r14
+	leaq	-16(%r14), %rsp
+	callq	Object_new
+	movq	%rax, -16(%r14)
+	movq	(%rax), %rcx
+	movl	$str1, %esi
+	movq	%rax, %rdi
+	callq	*(%rcx)
+	movl	$1, 8(%rbx)
+.LBB12_2:                               # %.3.endif
+	movq	%rbx, %rax
+	leaq	-16(%rbp), %rsp
+	popq	%rbx
+	popq	%r14
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end12:
+	.size	D_init, .Lfunc_end12-D_init
+	.cfi_endproc
+                                        # -- End function
+	.globl	E_new                   # -- Begin function E_new
+	.p2align	4, 0x90
+	.type	E_new,@function
+E_new:                                  # @E_new
+	.cfi_startproc
+# %bb.0:                                # %.2
+	pushq	%rax
+	.cfi_def_cfa_offset 16
+	movl	$16, %edi
+	callq	malloc
+	movq	%rax, %rdi
+	callq	E_init
+	popq	%rcx
+	.cfi_def_cfa_offset 8
+	retq
+.Lfunc_end13:
+	.size	E_new, .Lfunc_end13-E_new
+	.cfi_endproc
+                                        # -- End function
+	.globl	E_init                  # -- Begin function E_init
+	.p2align	4, 0x90
+	.type	E_init,@function
+E_init:                                 # @E_init
+	.cfi_startproc
+# %bb.0:                                # %.3
+	pushq	%rbx
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbx, -16
+	movq	%rdi, %rbx
+	testq	%rdi, %rdi
+	je	.LBB14_2
+# %bb.1:                                # %.3.if
+	movq	%rbx, %rdi
+	callq	D_init
+	movq	$E_vtable, (%rbx)
+.LBB14_2:                               # %.3.endif
+	movq	%rbx, %rax
+	popq	%rbx
+	.cfi_def_cfa_offset 8
+	retq
+.Lfunc_end14:
+	.size	E_init, .Lfunc_end14-E_init
+	.cfi_endproc
+                                        # -- End function
+	.globl	Main_new                # -- Begin function Main_new
+	.p2align	4, 0x90
+	.type	Main_new,@function
+Main_new:                               # @Main_new
+	.cfi_startproc
+# %bb.0:                                # %.2
+	pushq	%rax
+	.cfi_def_cfa_offset 16
+	movl	$8, %edi
+	callq	malloc
+	movq	%rax, %rdi
+	callq	Main_init
+	popq	%rcx
+	.cfi_def_cfa_offset 8
+	retq
+.Lfunc_end15:
+	.size	Main_new, .Lfunc_end15-Main_new
+	.cfi_endproc
+                                        # -- End function
+	.globl	Main_init               # -- Begin function Main_init
+	.p2align	4, 0x90
+	.type	Main_init,@function
+Main_init:                              # @Main_init
+	.cfi_startproc
+# %bb.0:                                # %.3
+	pushq	%rbx
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbx, -16
+	movq	%rdi, %rbx
+	testq	%rdi, %rdi
+	je	.LBB16_2
+# %bb.1:                                # %.3.if
+	movq	%rbx, %rdi
+	callq	Object_init
+	movq	$Main_vtable, (%rbx)
+.LBB16_2:                               # %.3.endif
+	movq	%rbx, %rax
+	popq	%rbx
+	.cfi_def_cfa_offset 8
+	retq
+.Lfunc_end16:
+	.size	Main_init, .Lfunc_end16-Main_init
+	.cfi_endproc
+                                        # -- End function
+	.globl	D_method_f              # -- Begin function D_method_f
+	.p2align	4, 0x90
+	.type	D_method_f,@function
+D_method_f:                             # @D_method_f
+	.cfi_startproc
+# %bb.0:                                # %.3
+	pushq	%rax
+	.cfi_def_cfa_offset 16
+	movq	%rdi, (%rsp)
+	movq	(%rdi), %rax
+	callq	*56(%rax)
+	popq	%rcx
+	.cfi_def_cfa_offset 8
+	retq
+.Lfunc_end17:
+	.size	D_method_f, .Lfunc_end17-D_method_f
+	.cfi_endproc
+                                        # -- End function
+	.globl	D_method_g              # -- Begin function D_method_g
+	.p2align	4, 0x90
+	.type	D_method_g,@function
+D_method_g:                             # @D_method_g
+	.cfi_startproc
+# %bb.0:                                # %.3
+	subq	$24, %rsp
+	.cfi_def_cfa_offset 32
+	movq	%rdi, 16(%rsp)
+	callq	Object_new
+	movq	%rax, 8(%rsp)
+	movq	(%rax), %rcx
+	movl	$str2, %esi
+	movq	%rax, %rdi
+	callq	*(%rcx)
+	movl	$1, %eax
+	addq	$24, %rsp
+	.cfi_def_cfa_offset 8
+	retq
+.Lfunc_end18:
+	.size	D_method_g, .Lfunc_end18-D_method_g
+	.cfi_endproc
+                                        # -- End function
+	.globl	E_method_g              # -- Begin function E_method_g
+	.p2align	4, 0x90
+	.type	E_method_g,@function
+E_method_g:                             # @E_method_g
+	.cfi_startproc
+# %bb.0:                                # %.3
+	subq	$24, %rsp
+	.cfi_def_cfa_offset 32
+	movq	%rdi, 16(%rsp)
+	callq	Object_new
+	movq	%rax, 8(%rsp)
+	movq	(%rax), %rcx
+	movl	$str3, %esi
+	movq	%rax, %rdi
+	callq	*(%rcx)
+	movl	$2, %eax
+	addq	$24, %rsp
+	.cfi_def_cfa_offset 8
+	retq
+.Lfunc_end19:
+	.size	E_method_g, .Lfunc_end19-E_method_g
+	.cfi_endproc
+                                        # -- End function
 	.globl	main                    # -- Begin function main
 	.p2align	4, 0x90
 	.type	main,@function
 main:                                   # @main
 	.cfi_startproc
-# %bb.0:                                # %.2
-	movl	$1, %eax
-	retq
-.Lfunc_end11:
-	.size	main, .Lfunc_end11-main
-	.cfi_endproc
-                                        # -- End function
-	.globl	A_method_test           # -- Begin function A_method_test
+# %bb.0:                                # %.3
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	pushq	%rbx
+	subq	$24, %rsp
+	.cfi_offset %rbx, -24
+	movq	%rdi, -24(%rbp)
+	movl	$0, -12(%rbp)
+	cmpl	$10, -12(%rbp)
+	jg	.LBB20_3
 	.p2align	4, 0x90
-	.type	A_method_test,@function
-A_method_test:                          # @A_method_test
-	.cfi_startproc
-# %bb.0:                                # %.2
-	movl	$str0, %eax
+.LBB20_2:                               # %loop
+                                        # =>This Inner Loop Header: Depth=1
+	movq	%rsp, %rbx
+	leaq	-16(%rbx), %rsp
+	callq	Object_new
+	movq	%rax, -16(%rbx)
+	movq	(%rax), %rcx
+	movl	-12(%rbp), %esi
+	movq	%rax, %rdi
+	callq	*16(%rcx)
+	incl	-12(%rbp)
+	cmpl	$10, -12(%rbp)
+	jle	.LBB20_2
+.LBB20_3:                               # %after_loop
+	movl	$1, %eax
+	leaq	-8(%rbp), %rsp
+	popq	%rbx
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
 	retq
-.Lfunc_end12:
-	.size	A_method_test, .Lfunc_end12-A_method_test
+.Lfunc_end20:
+	.size	main, .Lfunc_end20-main
 	.cfi_endproc
                                         # -- End function
 	.type	.str,@object            # @.str
@@ -569,6 +810,34 @@ Object_vtable:
 	.quad	Object_inputInt32
 	.size	Object_vtable, 48
 
+	.type	D_vtable,@object        # @D_vtable
+	.globl	D_vtable
+	.p2align	4
+D_vtable:
+	.quad	Object_print
+	.quad	Object_printBool
+	.quad	Object_printInt32
+	.quad	Object_inputLine
+	.quad	Object_inputBool
+	.quad	Object_inputInt32
+	.quad	D_method_f
+	.quad	D_method_g
+	.size	D_vtable, 64
+
+	.type	E_vtable,@object        # @E_vtable
+	.globl	E_vtable
+	.p2align	4
+E_vtable:
+	.quad	Object_print
+	.quad	Object_printBool
+	.quad	Object_printInt32
+	.quad	Object_inputLine
+	.quad	Object_inputBool
+	.quad	Object_inputInt32
+	.quad	D_method_f
+	.quad	E_method_g
+	.size	E_vtable, 64
+
 	.type	Main_vtable,@object     # @Main_vtable
 	.globl	Main_vtable
 	.p2align	4
@@ -582,49 +851,29 @@ Main_vtable:
 	.quad	main
 	.size	Main_vtable, 56
 
-	.type	A_vtable,@object        # @A_vtable
-	.globl	A_vtable
-	.p2align	4
-A_vtable:
-	.quad	Object_print
-	.quad	Object_printBool
-	.quad	Object_printInt32
-	.quad	Object_inputLine
-	.quad	Object_inputBool
-	.quad	Object_inputInt32
-	.quad	A_method_test
-	.size	A_vtable, 56
-
-	.type	B_vtable,@object        # @B_vtable
-	.globl	B_vtable
-	.p2align	4
-B_vtable:
-	.quad	Object_print
-	.quad	Object_printBool
-	.quad	Object_printInt32
-	.quad	Object_inputLine
-	.quad	Object_inputBool
-	.quad	Object_inputInt32
-	.size	B_vtable, 48
-
-	.type	A_c_vtable,@object      # @A_c_vtable
-	.globl	A_c_vtable
-	.p2align	4
-A_c_vtable:
-	.quad	Object_print
-	.quad	Object_printBool
-	.quad	Object_printInt32
-	.quad	Object_inputLine
-	.quad	Object_inputBool
-	.quad	Object_inputInt32
-	.quad	A_method_test
-	.size	A_c_vtable, 56
-
 	.type	str0,@object            # @str0
 	.globl	str0
 str0:
-	.asciz	"\"lol\""
-	.size	str0, 6
+	.asciz	"s"
+	.size	str0, 2
+
+	.type	str1,@object            # @str1
+	.globl	str1
+str1:
+	.asciz	"sa"
+	.size	str1, 3
+
+	.type	str2,@object            # @str2
+	.globl	str2
+str2:
+	.asciz	"d"
+	.size	str2, 2
+
+	.type	str3,@object            # @str3
+	.globl	str3
+str3:
+	.asciz	"e"
+	.size	str3, 2
 
 
 	.section	".note.GNU-stack","",@progbits

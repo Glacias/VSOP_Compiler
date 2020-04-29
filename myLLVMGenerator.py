@@ -43,10 +43,12 @@ class llvmGenerator:
 		self.file_name = file
 
 		# Create the types
+		self.int64 = ir.IntType(64)
 		self.int32 = ir.IntType(32)
 		self.int8 = ir.IntType(8)
 		self.boolean = ir.IntType(1)
 		self.void = ir.VoidType()
+		self.double = ir.DoubleType()
 
 		# Create the llvmlite module
 		self.module = ir.Module(name=file)
@@ -135,7 +137,19 @@ class llvmGenerator:
 		# 3) The dictionnary of methods (vtable)
 		# 4) The object_new
 		# 5) The object_init
-		initDict["Object"] = [structObj, structObjVTable, structObjDict, vtableObjDict, object_new, object_init]
+		initDict["Object"] = [structObj.as_pointer(), structObjVTable, structObjDict, vtableObjDict, object_new, object_init]
+
+		# Store the declaration of malloc (but avoid redeclaring it)
+		malloc_fnty = ir.FunctionType(self.int8.as_pointer(0), [self.int64])
+		malloc = ir.Function(moduleObject, malloc_fnty, name='malloc')
+		initDict["_malloc"] = malloc # will not collide with class because class start with a maj
+
+		# Declare the pow function from c
+		power_fnty = ir.FunctionType(self.double, [self.double, self.double])
+		power = ir.Function(self.module, power_fnty, name='pow')
+		# Also declare the function to cast for int
+		power_fnty_int = ir.FunctionType(self.int32, [self.int32, self.int32]).as_pointer()
+		initDict["_pow"] = [power, power_fnty_int]
 
 		return initDict
 
@@ -155,7 +169,7 @@ class llvmGenerator:
 			class_init_fnty = ir.FunctionType(structClass.as_pointer(), [structClass.as_pointer()])
 			class_init = ir.Function(self.module, class_init_fnty, name=(cl.name + '_init'))
 			# Add
-			self.initDict[cl.name] = [structClass, structClassVTable, "", "", class_new, class_init]
+			self.initDict[cl.name] = [structClass, structClassVTable, "", "", class_new, class_init, []]
 
 		## Now fill the dict for all the class and generate corresponding code
 		for cl in self.ast.list_class:
@@ -181,14 +195,14 @@ class llvmGenerator:
 			clInitDictInfo[3] = parInitDictInfo[3].copy()
 
 			# Keep the number of fields and methods inside the parent
-			nbrMeth = len(clInitDictInfo[2])
-			nbrField = len(clInitDictInfo[3])
+			nbrField = len(clInitDictInfo[2]) + 1
+			nbrMeth = len(clInitDictInfo[3])
 
 			# Add the fields
 			for fl in cl.fields:
 				# If the type is unit, skip it
 				if fl.type.type == "unit":
-					break;
+					nbrField = nbrField - 1
 				# Get the llvmlite type
 				llvmFieldType = self.initDict[fl.type.type][0]
 				clInitDictInfo[2][fl.name] = (nbrField, llvmFieldType)
@@ -197,16 +211,21 @@ class llvmGenerator:
 			# Set the body for the structure
 			ls_fieldType = [clInitDictInfo[1].as_pointer()]
 			for n,t in clInitDictInfo[2].items():
+				# If void skip
+				if t[1] == self.void :
+					continue
 				ls_fieldType.append(t[1])
 			clInitDictInfo[0].set_body(*ls_fieldType)
 
+			# From now an object is represented by its pointer
+			clInitDictInfo[0] = clInitDictInfo[0].as_pointer()
 
 			# Add the methods (and declare them) (and change the return type (why?))
 			for mt in cl.methods:
 				# Get the llvmlite type of the return type
 				llvmMethodReturnType = self.initDict[mt.type.type][0]
 				# Get the list of llvmlite types of the formals
-				ls_formals = []
+				ls_formals = [clInitDictInfo[0]]  # Add the pointer to the class as first argument
 				for fm in mt.formals.list_formals:
 					ls_formals.append(self.initDict[fm.type.type][0])
 
@@ -244,4 +263,6 @@ class llvmGenerator:
 			g = ir.GlobalVariable(self.module, c.type, cl.name + "_vtable")
 			g.initializer = c
 			g.global_constant = True
-			
+
+			# Add the constant to the dict
+			clInitDictInfo[6] = g

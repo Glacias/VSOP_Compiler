@@ -106,15 +106,75 @@ class Class(Node):
 
     # Generate code for the class
     def codeGen(self, lgen):
-        # Create init
+        # Get the class init info
+        clInitDictInfo = lgen.initDict.get(self.name)
 
-        # For every field
-        for fl in self.fields:
-            fl.codeGen(lgen, self.name)
+        ## Create new
+        # Get the function new info
+        infoMetNew = clInitDictInfo[4]
+        # Get the function new declaration and create the first block
+        blockNew = infoMetNew.append_basic_block()
+        # Create the new builder on that block
+        bldrNew = ir.IRBuilder(blockNew)
+        # Get the size of the struct
+        c = ir.Constant(clInitDictInfo[0], None)
+        size_as_ptr = bldrNew.gep(c, [lgen.int32(1)], inbounds=False, name="size_as_ptr")
+        size_as_i64 = bldrNew.ptrtoint(size_as_ptr, lgen.int64, name="size_as_i64")
+        # Get the info of malloc
+        malloc_f = lgen.initDict.get("_malloc")
+        # Call malloc
+        ans_malloc = bldrNew.call(malloc_f, [size_as_i64])
+        # Bitcast malloc
+        allptr = bldrNew.bitcast(ans_malloc, clInitDictInfo[0])
+        # Call init
+        ans_int = bldrNew.call(clInitDictInfo[5], [allptr])
+        # Return the object of type class
+        bldrNew.ret(ans_int)
 
-        # Create new
+        ## Create init
+        # Get the function init info
+        infoMetInit = clInitDictInfo[5]
+        # Get the function init declaration and create the first block
+        blockInit = infoMetInit.append_basic_block()
+        # Create the init builder on that block
+        bldrInit = ir.IRBuilder(blockInit)
+        # Get the ptr to object
+        ptr_obj = infoMetInit.args[0]
+        # Check that the pointer is not null
+        pred = bldrInit.icmp_unsigned("!=", ptr_obj, c)
+        # If not null
+        with bldrInit.if_then(pred) as then:
+            # Get the parent class init info
+            parInitDictInfo = lgen.initDict.get(self.parent)
+            # Cast the class into his parent
+            ptr_obj_par = bldrInit.bitcast(ptr_obj, parInitDictInfo[0])
+            # Call the init of the parent
+            bldrInit.call(parInitDictInfo[5], [ptr_obj_par])
+            # Get the pointer to where the ptr vtable will be stored
+            ptr_vtable = bldrInit.gep(ptr_obj, [lgen.int32(0), lgen.int32(0)], inbounds=True)
+            # Store the pointer to the const vtable inside the object
+            bldrInit.store(clInitDictInfo[6], ptr_vtable)
 
-        # For every method
+            # Initialize the fields
+            for fl in self.fields:
+                # Generate the value of the field
+                value_f = fl.codeGen(lgen, self.name, bldrInit)
+                # Get the field position on the table
+                pos_f = clInitDictInfo[2][fl.name][0]
+
+                # If void skip
+                if clInitDictInfo[2][fl.name][1] == lgen.void:
+                    continue
+
+                # Get the pointer to the field
+                ptr_f = bldrInit.gep(ptr_obj, [lgen.int32(0), lgen.int32(pos_f)])
+                # Store the value in the field
+                bldrInit.store(value_f, ptr_f)
+
+        # Return the pointer to the obj
+        bldrInit.ret(ptr_obj)
+
+        # For every method, generate the code
         for mt in self.methods:
             mt.codeGen(lgen, self.name)
 
@@ -150,8 +210,17 @@ class Field(Node):
                 error_message_ast(self.type.line, self.type.col, "the type of the initializer (" + typeExpr + ") must conform to the declared type of the field (" + self.type.type + ")", file_name, error_buffer)
 
     # Generate code for the field
-    def codeGen(self, lgen, className):
-        pass
+    def codeGen(self, lgen, className, bldr):
+        # Get the llvmlite type of the field
+        fieldType = lgen.initDict[className][2][self.name][1]
+        # If there is not initial expr, set to null
+        if self.init_expr == "":
+            return ir.Constant(fieldType, None)
+        else:
+            # Create empty symbol table
+            st = symbolTable()
+            value = self.init_expr.codeGenExpr(lgen, className, bldr, st)
+            return value
 
 class Method(Node):
     def __init__(self, name, formals, type, block):
@@ -208,8 +277,25 @@ class Method(Node):
         # Create the builder on that block
         bldr = ir.IRBuilder(block)
 
-        # Create a symbol table for the arguments and fields (and self)
+        # Create a symbol table for the arguments (and self)
         st = symbolTable()
+        # Add the arguments
+        args = metInitDictInfo[2].args
+        # Allocate space for self
+        ptr = bldr.alloca(args[0].type)
+        # Store the value of self
+        bldr.store(args[0], ptr)
+        # Bind the pointer to self to the symbol table
+        st.bind("self", ptr)
+        i = 1 # Start at 1 to skip self
+        for fm in self.formals.list_formals:
+            # Allocate space for the arg
+            ptr = bldr.alloca(args[i].type)
+            # Store the value of the arg
+            bldr.store(args[i], ptr)
+            # Bind the pointer to the symbol table
+            st.bind(fm.name, ptr)
+            i = i + 1
 
         # Launch the builder on the block
         value = self.block.codeGenExpr(lgen, className, bldr, st)
@@ -351,6 +437,34 @@ class Expr_if(Expr):
         error_message_ast(self.line, self.col, "IF conditional expression, the type of the expression inside THEN (" + typeThenExpr + ") does not agree with the type of the expression inside ELSE (" + typeElseExpr + ")", file_name, error_buffer)
         return "unit"
 
+    # Generate code for a if
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Get the value of predicate
+        pred = self.cond_expr.codeGenExpr(lgen, className, bldr, st)
+
+        # If then
+        if(self.else_expr==""):
+            with bldr.if_then(pred) as then:
+                value = self.then_expr.codeGenExpr(lgen, className, bldr, st)
+            return lgen.void
+
+        # if then else
+        else:
+            with bldr.if_else(pred) as (then, otherwise):
+                with then:
+                    blockThen = bldr.block
+                    value_then = self.then_expr.codeGenExpr(lgen, className, bldr, st)
+                with otherwise:
+                    blockOtherwise = bldr.block
+                    value_otherwise = self.else_expr.codeGenExpr(lgen, className, bldr, st)
+            # Get the type
+            typeIf = lgen.initDict[self.typeChecked][0]
+            # Return the value of the branch that was executed
+            value = bldr.phi(typeIf)
+            value.add_incoming(value_then, blockThen)
+            value.add_incoming(value_otherwise, blockOtherwise)
+            return value
+
 class Expr_while(Expr):
     def __init__(self, cond_expr, body_expr):
         Node.__init__(self)
@@ -374,6 +488,31 @@ class Expr_while(Expr):
             error_message_ast(self.cond_expr.line, self.cond_expr.col, "while conditional expression must be of type bool", file_name, error_buffer)
         self.typeChecked = "unit"
         return self.typeChecked
+
+    # Generate code for a while
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Create the basic blocks
+        bb_cond = bldr.append_basic_block("cond")
+        bb_loop = bldr.append_basic_block("loop")
+        bb_after_loop = bldr.append_basic_block("after_loop")
+
+        # Enter the cnd
+        bldr.branch(bb_cond)
+
+        # Build the cond
+        bldr.position_at_end(bb_cond)
+        cond = self.cond_expr.codeGenExpr(lgen, className, bldr, st)
+        bldr.cbranch(cond, bb_loop, bb_after_loop)
+
+        # Build the loop
+        bldr.position_at_end(bb_loop)
+        loop = self.body_expr.codeGenExpr(lgen, className, bldr, st)
+        bldr.branch(bb_cond)
+
+        # Return to the after loop
+        bldr.position_at_end(bb_after_loop)
+        return lgen.void
+
 
 class Expr_let(Expr):
     def __init__(self, name, type, scope_expr):
@@ -430,6 +569,28 @@ class Expr_let(Expr):
         st.exit_ctx()
         return self.typeChecked
 
+    # Generate code for let
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Get the type of the id
+        typeId = lgen.initDict[self.type.type][0]
+        # Allocate space for the arg
+        ptr = bldr.alloca(typeId)
+        # If it is initialized
+        if self.init_expr != "":
+            # Get the value
+            v = self.init_expr.codeGenExpr(lgen, className, bldr, st)
+            # Store the value of the arg
+            bldr.store(v, ptr)
+        else:
+            # Create a null constant
+            v = ir.Constant(typeId, None)
+            # Store it
+            bldr.store(v, ptr)
+
+        # Bind the pointer to the symbol table
+        st.bind(self.name, ptr)
+        # Return the value of the block
+        return self.scope_expr.codeGenExpr(lgen, className, bldr, st)
 
 class Expr_assign(Expr):
     def __init__(self, name, expr):
@@ -462,6 +623,34 @@ class Expr_assign(Expr):
             return infoId.type # Error recovery
         self.typeChecked = infoId.type
         return self.typeChecked
+
+    # Generate code for an assign
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Get the value of the expr
+        value = self.expr.codeGenExpr(lgen, className, bldr, st)
+        # Get the ptr to the identifier
+        ptrId = st.lookup(self.name)
+
+        # Check it exist
+        if ptrId is not None:
+            # Store the new value in the identifier
+            bldr.store(value, ptrId)
+
+        # If it does not exist, it is a field
+        else:
+            # Get the ptr to ptr to self
+            ptrptrSelf = st.lookup("self")
+            # Load it
+            ptrSelf = bldr.load(ptrptrSelf)
+            # Get the field info
+            llvmInfoField = lgen.initDict[className][2][self.name]
+            nbrField = llvmInfoField[0]
+            # Get the pointer to the field
+            ptrField = bldr.gep(ptrSelf, [lgen.int32(0), lgen.int32(nbrField)], inbounds=True)
+            # Store the value in the field
+            bldr.store(value, ptrField)
+
+        return value
 
 class Expr_UnOp(Expr):
     def __init__(self, unop, expr):
@@ -498,6 +687,26 @@ class Expr_UnOp(Expr):
                 return "bool" # Error recovery : bool
             self.typeChecked = "bool"
         return self.typeChecked
+
+    # Generate code for unary operator
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Get the value of the expr
+        value = self.expr.codeGenExpr(lgen, className, bldr, st)
+        # if unop is "not"
+        if self.unop == "not":
+            return bldr.not_(value)
+        # if unop is minus
+        elif self.unop == "-":
+            return bldr.neg(value)
+        # if unop is isnull 
+        else:
+            # Get the type
+            typeInfo = lgen.initDict[self.expr.typeChecked]
+            # Generate null
+            null = ir.Constant(typeInfo[0], None) 
+            # Check that the pointer is null
+            return bldr.icmp_unsigned("==", value, null)
+
 
 class Expr_BinOp(Expr):
     def __init__(self, op, left_expr, right_expr):
@@ -621,6 +830,49 @@ class Expr_BinOp(Expr):
             error_message_ast(self.line, self.col, "Failed to recognise binary operator", file_name, error_buffer)
             return "bool"
 
+
+    # Generate code for binary operator
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Get the value of both expr
+        valueLeft = self.left_expr.codeGenExpr(lgen, className, bldr, st)
+        valueRight = self.right_expr.codeGenExpr(lgen, className, bldr, st)
+        # And
+        if self.op ==  "and":
+            return bldr.and_(valueLeft, valueRight)
+        # Equal
+        elif self.op == "=":
+            return bldr.icmp_signed("==", valueLeft, valueRight)
+        # Lower
+        elif self.op == "<":
+            return bldr.icmp_signed("<", valueLeft, valueRight)
+        # Lower equal
+        elif self.op == "<=":
+            return bldr.icmp_signed("<=", valueLeft, valueRight)
+        # Plus
+        elif self.op == "+":
+            return bldr.add(valueLeft, valueRight)
+        # Minus
+        elif self.op == "-":
+            return bldr.sub(valueLeft, valueRight)
+        # Times
+        elif self.op == "*":
+            return bldr.mul(valueLeft, valueRight)
+        # Div
+        elif self.op == "/":
+            return bldr.sdiv(valueLeft, valueRight)
+        # Pow
+        elif self.op == "^":
+            # Get the power function
+            powerInfo = lgen.initDict["_pow"]
+            # Cast the values to double
+            valLeftDouble = bldr.uitofp(valueLeft, lgen.double)
+            valRightDouble = bldr.uitofp(valueRight, lgen.double)
+            # Call the pow from the C library
+            resDouble = bldr.call(powerInfo[0], (valLeftDouble, valRightDouble))
+            # Convert the result to int
+            return bldr.fptoui(resDouble, lgen.int32)
+
+
 class Expr_Call(Expr):
     def __init__(self, method_name, args):
         Node.__init__(self)
@@ -697,6 +949,51 @@ class Expr_Call(Expr):
         self.typeChecked = methodInfo[0].type.type
         return self.typeChecked
 
+    # Generate code for call
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # In case of deduced self
+        if self.object_expr == "self":
+            # Get the ptr to ptr to object
+            ptrptrObj = st.lookup("self")
+            # Get the ptr to object
+            ptrObj = bldr.load(ptrptrObj)
+            # Get the type
+            typeObj = className
+        else:
+            # Get the ptr from the expr
+            ptrObj = self.object_expr.codeGenExpr(lgen, className, bldr, st)
+            # Get the type
+            typeObj = self.object_expr.typeChecked
+
+        # Get the class init dict info
+        clInitDictInfo = lgen.initDict[typeObj]
+        # Get the method info
+        metInfo = clInitDictInfo[3][self.method_name]
+        # Get the method number in the vtable
+        nbrMet = metInfo[0]
+        # Do the dynamic dispatch
+        # Get the vtable
+        ob = bldr.gep(ptrObj, [lgen.int32(0), lgen.int32(0)], inbounds=True)
+        vt = bldr.load(ob)
+        # Get the method inside the vtable
+        ob2 = bldr.gep(vt, [lgen.int32(0), lgen.int32(nbrMet)], inbounds=True)
+        met = bldr.load(ob2)
+
+        # Cast the ptr_object to the type of the first argument if required
+        if metInfo[1].args[0] != clInitDictInfo[0]:
+            ptrObj = bldr.bitcast(ptrObj, metInfo[1].args[0])
+
+        # Get the arguments
+        ls_args = [ptrObj]
+        for arg in self.args.list_args:
+            # Get the value of the arg
+            value = arg.codeGenExpr(lgen, className, bldr, st)
+            # Add it to the list
+            ls_args.append(value)
+
+        # Call the method
+        return bldr.call(met, ls_args)
+
 class Expr_Object_identifier(Expr):
     def __init__(self, name):
         Node.__init__(self)
@@ -721,6 +1018,29 @@ class Expr_Object_identifier(Expr):
             self.typeChecked = varInfo.type
             return self.typeChecked
 
+    # Generate code for an object identifier
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Get the ptr to the identifier
+        ptrId = st.lookup(self.name)
+        # Check it exist
+        if ptrId is not None:
+            # Store the new value in the identifier
+            value = bldr.load(ptrId)
+        # If it does not exist, it is a field
+        else:
+            # Get the ptr to ptr to self
+            ptrptrSelf = st.lookup("self")
+            # Load it
+            ptrSelf = bldr.load(ptrptrSelf)
+            # Get the field info
+            llvmInfoField = lgen.initDict[className][2][self.name]
+            nbrField = llvmInfoField[0]
+            # Get the pointer to the field
+            ptrField = bldr.gep(ptrSelf, [lgen.int32(0), lgen.int32(nbrField)], inbounds=True)
+            # Store the value in the field
+            value = bldr.load(ptrField)
+        return value
+
 class Expr_New(Expr):
     def __init__(self, type_name):
         Node.__init__(self)
@@ -741,6 +1061,12 @@ class Expr_New(Expr):
         else:
             self.typeChecked = self.type_name
             return self.typeChecked
+    # Generate code for new
+    def codeGenExpr(self, lgen, className, bldr, st):
+        # Get the info of the class
+        funcNew = lgen.initDict[self.type_name][4]
+        # Call the new method of the object an return the value
+        return bldr.call(funcNew, ())
 
 class Expr_Unit(Expr):
     def __init__(self):
@@ -755,6 +1081,9 @@ class Expr_Unit(Expr):
     def checkExpr(self, gst, st, file_name, error_buffer):
         self.typeChecked = "unit"
         return self.typeChecked
+    # Generate code for unit
+    def codeGenExpr(self, lgen, className, bldr, st):
+        return lgen.void()
 
 class Args(Node):
     def __init__(self):
@@ -812,10 +1141,10 @@ class Literal(Node):
 
         # bool
         else:
-            if self.literal.bool == "true":
-                return lgen.bool(1)
+            if self.literal.bool:
+                return lgen.boolean(1)
             else:
-                return lgen.bool(0)
+                return lgen.boolean(0)
 
 
 class Boolean_literal(Node):

@@ -1,15 +1,18 @@
+class D {
+    a : unit <- if true then let o1 : Object <- new Object in { o1.print("s") };
+    b : int32 <- let o1 : Object <- new Object in { o1.print("sa"); 1 };
+    f() : int32 { g() }
+    g() : int32 { let o1 : Object <- new Object in { isnull self; o1.print("d") }; 1 }
+}
+
+class E extends D {
+    g() : int32 { let o1 : Object <- new Object in { self; o1.print("e") }; 2 }
+}
+
 class Main {
-    main() : int32 { 3; "pff"; 1 }
-}
-
-class A {
-    test() : string { 1 ; "lol"}
-}
-
-class B {
-    
-}
-
-class A_c extends A {
-    
+    main() : int32 {let x : int32 <- 0 in
+                     { while x <= 10 do { 
+                        let o1 : Object <- new Object in { isnull self; o1.printInt32(x) };
+                        x <- x + 1 } }; 1
+                     }
 }

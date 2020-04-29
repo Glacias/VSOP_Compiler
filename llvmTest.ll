@@ -380,47 +380,208 @@ define internal void @skip_while(i32 (i32)*) {
 
 target datalayout = ""
 
+%"struct.D" = type {%"struct.DVTable"*, i32}
+%"struct.DVTable" = type {%"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i1)*, %"struct.Object"* (%"struct.Object"*, i32)*, i8* (%"struct.Object"*)*, i1 (%"struct.Object"*)*, i32 (%"struct.Object"*)*, i32 (%"struct.D"*)*, i32 (%"struct.D"*)*}
+%"struct.E" = type {%"struct.EVTable"*, i32}
+%"struct.EVTable" = type {%"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i1)*, %"struct.Object"* (%"struct.Object"*, i32)*, i8* (%"struct.Object"*)*, i1 (%"struct.Object"*)*, i32 (%"struct.Object"*)*, i32 (%"struct.D"*)*, i32 (%"struct.E"*)*}
 %"struct.Main" = type {%"struct.MainVTable"*}
-%"struct.MainVTable" = type {%"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i1)*, %"struct.Object"* (%"struct.Object"*, i32)*, i8* (%"struct.Object"*)*, i1 (%"struct.Object"*)*, i32 (%"struct.Object"*)*, i32 ()*}
-%"struct.A" = type {%"struct.AVTable"*}
-%"struct.AVTable" = type {%"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i1)*, %"struct.Object"* (%"struct.Object"*, i32)*, i8* (%"struct.Object"*)*, i1 (%"struct.Object"*)*, i32 (%"struct.Object"*)*, i8* ()*}
-%"struct.B" = type {%"struct.BVTable"*}
-%"struct.BVTable" = type {%"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i1)*, %"struct.Object"* (%"struct.Object"*, i32)*, i8* (%"struct.Object"*)*, i1 (%"struct.Object"*)*, i32 (%"struct.Object"*)*}
-%"struct.A_c" = type {%"struct.A_cVTable"*}
-%"struct.A_cVTable" = type {%"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i1)*, %"struct.Object"* (%"struct.Object"*, i32)*, i8* (%"struct.Object"*)*, i1 (%"struct.Object"*)*, i32 (%"struct.Object"*)*, i8* ()*}
-declare %"struct.Main"* @"Main_new"() 
+%"struct.MainVTable" = type {%"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i1)*, %"struct.Object"* (%"struct.Object"*, i32)*, i8* (%"struct.Object"*)*, i1 (%"struct.Object"*)*, i32 (%"struct.Object"*)*, i32 (%"struct.Main"*)*}
+declare double @"pow"(double %".1", double %".2") 
 
-declare %"struct.Main"* @"Main_init"(%"struct.Main"* %".1") 
-
-declare %"struct.A"* @"A_new"() 
-
-declare %"struct.A"* @"A_init"(%"struct.A"* %".1") 
-
-declare %"struct.B"* @"B_new"() 
-
-declare %"struct.B"* @"B_init"(%"struct.B"* %".1") 
-
-declare %"struct.A_c"* @"A_c_new"() 
-
-declare %"struct.A_c"* @"A_c_init"(%"struct.A_c"* %".1") 
-
-define i32 @"main"() 
+define %"struct.D"* @"D_new"() 
 {
 .2:
-  %".3" = getelementptr inbounds [4 x i8], [4 x i8]* @"str0", i32 0, i32 0
+  %"size_as_ptr" = getelementptr %"struct.D", %"struct.D"* null, i32 1
+  %"size_as_i64" = ptrtoint %"struct.D"* %"size_as_ptr" to i64
+  %".3" = call i8* @"malloc"(i64 %"size_as_i64")
+  %".4" = bitcast i8* %".3" to %"struct.D"*
+  %".5" = call %"struct.D"* @"D_init"(%"struct.D"* %".4")
+  ret %"struct.D"* %".5"
+}
+
+define %"struct.D"* @"D_init"(%"struct.D"* %".1") 
+{
+.3:
+  %".4" = icmp ne %"struct.D"* %".1", null
+  br i1 %".4", label %".3.if", label %".3.endif"
+.3.if:
+  %".6" = bitcast %"struct.D"* %".1" to %"struct.Object"*
+  %".7" = call %"struct.Object"* @"Object_init"(%"struct.Object"* %".6")
+  %".8" = getelementptr inbounds %"struct.D", %"struct.D"* %".1", i32 0, i32 0
+  store %"struct.DVTable"* @"D_vtable", %"struct.DVTable"** %".8"
+  br i1 1, label %".3.if.if", label %".3.if.endif"
+.3.endif:
+  ret %"struct.D"* %".1"
+.3.if.if:
+  %".11" = alloca %"struct.Object"*
+  %".12" = call %"struct.Object"* @"Object_new"()
+  store %"struct.Object"* %".12", %"struct.Object"** %".11"
+  %".14" = load %"struct.Object"*, %"struct.Object"** %".11"
+  %".15" = getelementptr inbounds %"struct.Object", %"struct.Object"* %".14", i32 0, i32 0
+  %".16" = load %"struct.ObjectVTable"*, %"struct.ObjectVTable"** %".15"
+  %".17" = getelementptr inbounds %"struct.ObjectVTable", %"struct.ObjectVTable"* %".16", i32 0, i32 0
+  %".18" = load %"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i8*)** %".17"
+  %".19" = getelementptr inbounds [2 x i8], [2 x i8]* @"str0", i32 0, i32 0
+  %".20" = call %"struct.Object"* %".18"(%"struct.Object"* %".14", i8* %".19")
+  br label %".3.if.endif"
+.3.if.endif:
+  %".22" = alloca %"struct.Object"*
+  %".23" = call %"struct.Object"* @"Object_new"()
+  store %"struct.Object"* %".23", %"struct.Object"** %".22"
+  %".25" = load %"struct.Object"*, %"struct.Object"** %".22"
+  %".26" = getelementptr inbounds %"struct.Object", %"struct.Object"* %".25", i32 0, i32 0
+  %".27" = load %"struct.ObjectVTable"*, %"struct.ObjectVTable"** %".26"
+  %".28" = getelementptr inbounds %"struct.ObjectVTable", %"struct.ObjectVTable"* %".27", i32 0, i32 0
+  %".29" = load %"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i8*)** %".28"
+  %".30" = getelementptr inbounds [3 x i8], [3 x i8]* @"str1", i32 0, i32 0
+  %".31" = call %"struct.Object"* %".29"(%"struct.Object"* %".25", i8* %".30")
+  %".32" = getelementptr %"struct.D", %"struct.D"* %".1", i32 0, i32 1
+  store i32 1, i32* %".32"
+  br label %".3.endif"
+}
+
+define %"struct.E"* @"E_new"() 
+{
+.2:
+  %"size_as_ptr" = getelementptr %"struct.E", %"struct.E"* null, i32 1
+  %"size_as_i64" = ptrtoint %"struct.E"* %"size_as_ptr" to i64
+  %".3" = call i8* @"malloc"(i64 %"size_as_i64")
+  %".4" = bitcast i8* %".3" to %"struct.E"*
+  %".5" = call %"struct.E"* @"E_init"(%"struct.E"* %".4")
+  ret %"struct.E"* %".5"
+}
+
+define %"struct.E"* @"E_init"(%"struct.E"* %".1") 
+{
+.3:
+  %".4" = icmp ne %"struct.E"* %".1", null
+  br i1 %".4", label %".3.if", label %".3.endif"
+.3.if:
+  %".6" = bitcast %"struct.E"* %".1" to %"struct.D"*
+  %".7" = call %"struct.D"* @"D_init"(%"struct.D"* %".6")
+  %".8" = getelementptr inbounds %"struct.E", %"struct.E"* %".1", i32 0, i32 0
+  store %"struct.EVTable"* @"E_vtable", %"struct.EVTable"** %".8"
+  br label %".3.endif"
+.3.endif:
+  ret %"struct.E"* %".1"
+}
+
+define %"struct.Main"* @"Main_new"() 
+{
+.2:
+  %"size_as_ptr" = getelementptr %"struct.Main", %"struct.Main"* null, i32 1
+  %"size_as_i64" = ptrtoint %"struct.Main"* %"size_as_ptr" to i64
+  %".3" = call i8* @"malloc"(i64 %"size_as_i64")
+  %".4" = bitcast i8* %".3" to %"struct.Main"*
+  %".5" = call %"struct.Main"* @"Main_init"(%"struct.Main"* %".4")
+  ret %"struct.Main"* %".5"
+}
+
+define %"struct.Main"* @"Main_init"(%"struct.Main"* %".1") 
+{
+.3:
+  %".4" = icmp ne %"struct.Main"* %".1", null
+  br i1 %".4", label %".3.if", label %".3.endif"
+.3.if:
+  %".6" = bitcast %"struct.Main"* %".1" to %"struct.Object"*
+  %".7" = call %"struct.Object"* @"Object_init"(%"struct.Object"* %".6")
+  %".8" = getelementptr inbounds %"struct.Main", %"struct.Main"* %".1", i32 0, i32 0
+  store %"struct.MainVTable"* @"Main_vtable", %"struct.MainVTable"** %".8"
+  br label %".3.endif"
+.3.endif:
+  ret %"struct.Main"* %".1"
+}
+
+define i32 @"D_method_f"(%"struct.D"* %".1") 
+{
+.3:
+  %".4" = alloca %"struct.D"*
+  store %"struct.D"* %".1", %"struct.D"** %".4"
+  %".6" = load %"struct.D"*, %"struct.D"** %".4"
+  %".7" = getelementptr inbounds %"struct.D", %"struct.D"* %".6", i32 0, i32 0
+  %".8" = load %"struct.DVTable"*, %"struct.DVTable"** %".7"
+  %".9" = getelementptr inbounds %"struct.DVTable", %"struct.DVTable"* %".8", i32 0, i32 7
+  %".10" = load i32 (%"struct.D"*)*, i32 (%"struct.D"*)** %".9"
+  %".11" = call i32 %".10"(%"struct.D"* %".6")
+  ret i32 %".11"
+}
+
+define i32 @"D_method_g"(%"struct.D"* %".1") 
+{
+.3:
+  %".4" = alloca %"struct.D"*
+  store %"struct.D"* %".1", %"struct.D"** %".4"
+  %".6" = alloca %"struct.Object"*
+  %".7" = call %"struct.Object"* @"Object_new"()
+  store %"struct.Object"* %".7", %"struct.Object"** %".6"
+  %".9" = load %"struct.D"*, %"struct.D"** %".4"
+  %".10" = icmp eq %"struct.D"* %".9", null
+  %".11" = load %"struct.Object"*, %"struct.Object"** %".6"
+  %".12" = getelementptr inbounds %"struct.Object", %"struct.Object"* %".11", i32 0, i32 0
+  %".13" = load %"struct.ObjectVTable"*, %"struct.ObjectVTable"** %".12"
+  %".14" = getelementptr inbounds %"struct.ObjectVTable", %"struct.ObjectVTable"* %".13", i32 0, i32 0
+  %".15" = load %"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i8*)** %".14"
+  %".16" = getelementptr inbounds [2 x i8], [2 x i8]* @"str2", i32 0, i32 0
+  %".17" = call %"struct.Object"* %".15"(%"struct.Object"* %".11", i8* %".16")
   ret i32 1
 }
 
-@"Main_vtable" = constant %"struct.MainVTable" {%"struct.Object"* (%"struct.Object"*, i8*)* @"Object_print", %"struct.Object"* (%"struct.Object"*, i1)* @"Object_printBool", %"struct.Object"* (%"struct.Object"*, i32)* @"Object_printInt32", i8* (%"struct.Object"*)* @"Object_inputLine", i1 (%"struct.Object"*)* @"Object_inputBool", i32 (%"struct.Object"*)* @"Object_inputInt32", i32 ()* @"main"}
-define i8* @"A_method_test"() 
+@"D_vtable" = constant %"struct.DVTable" {%"struct.Object"* (%"struct.Object"*, i8*)* @"Object_print", %"struct.Object"* (%"struct.Object"*, i1)* @"Object_printBool", %"struct.Object"* (%"struct.Object"*, i32)* @"Object_printInt32", i8* (%"struct.Object"*)* @"Object_inputLine", i1 (%"struct.Object"*)* @"Object_inputBool", i32 (%"struct.Object"*)* @"Object_inputInt32", i32 (%"struct.D"*)* @"D_method_f", i32 (%"struct.D"*)* @"D_method_g"}
+define i32 @"E_method_g"(%"struct.E"* %".1") 
 {
-.2:
-  %".3" = getelementptr inbounds [4 x i8], [4 x i8]* @"str1", i32 0, i32 0
-  ret i8* %".3"
+.3:
+  %".4" = alloca %"struct.E"*
+  store %"struct.E"* %".1", %"struct.E"** %".4"
+  %".6" = alloca %"struct.Object"*
+  %".7" = call %"struct.Object"* @"Object_new"()
+  store %"struct.Object"* %".7", %"struct.Object"** %".6"
+  %".9" = load %"struct.E"*, %"struct.E"** %".4"
+  %".10" = load %"struct.Object"*, %"struct.Object"** %".6"
+  %".11" = getelementptr inbounds %"struct.Object", %"struct.Object"* %".10", i32 0, i32 0
+  %".12" = load %"struct.ObjectVTable"*, %"struct.ObjectVTable"** %".11"
+  %".13" = getelementptr inbounds %"struct.ObjectVTable", %"struct.ObjectVTable"* %".12", i32 0, i32 0
+  %".14" = load %"struct.Object"* (%"struct.Object"*, i8*)*, %"struct.Object"* (%"struct.Object"*, i8*)** %".13"
+  %".15" = getelementptr inbounds [2 x i8], [2 x i8]* @"str3", i32 0, i32 0
+  %".16" = call %"struct.Object"* %".14"(%"struct.Object"* %".10", i8* %".15")
+  ret i32 2
 }
 
-@"A_vtable" = constant %"struct.AVTable" {%"struct.Object"* (%"struct.Object"*, i8*)* @"Object_print", %"struct.Object"* (%"struct.Object"*, i1)* @"Object_printBool", %"struct.Object"* (%"struct.Object"*, i32)* @"Object_printInt32", i8* (%"struct.Object"*)* @"Object_inputLine", i1 (%"struct.Object"*)* @"Object_inputBool", i32 (%"struct.Object"*)* @"Object_inputInt32", i8* ()* @"A_method_test"}
-@"B_vtable" = constant %"struct.BVTable" {%"struct.Object"* (%"struct.Object"*, i8*)* @"Object_print", %"struct.Object"* (%"struct.Object"*, i1)* @"Object_printBool", %"struct.Object"* (%"struct.Object"*, i32)* @"Object_printInt32", i8* (%"struct.Object"*)* @"Object_inputLine", i1 (%"struct.Object"*)* @"Object_inputBool", i32 (%"struct.Object"*)* @"Object_inputInt32"}
-@"A_c_vtable" = constant %"struct.A_cVTable" {%"struct.Object"* (%"struct.Object"*, i8*)* @"Object_print", %"struct.Object"* (%"struct.Object"*, i1)* @"Object_printBool", %"struct.Object"* (%"struct.Object"*, i32)* @"Object_printInt32", i8* (%"struct.Object"*)* @"Object_inputLine", i1 (%"struct.Object"*)* @"Object_inputBool", i32 (%"struct.Object"*)* @"Object_inputInt32", i8* ()* @"A_method_test"}
-@"str0" = constant [4 x i8] c"pff\00"
-@"str1" = constant [4 x i8] c"lol\00"
+@"E_vtable" = constant %"struct.EVTable" {%"struct.Object"* (%"struct.Object"*, i8*)* @"Object_print", %"struct.Object"* (%"struct.Object"*, i1)* @"Object_printBool", %"struct.Object"* (%"struct.Object"*, i32)* @"Object_printInt32", i8* (%"struct.Object"*)* @"Object_inputLine", i1 (%"struct.Object"*)* @"Object_inputBool", i32 (%"struct.Object"*)* @"Object_inputInt32", i32 (%"struct.D"*)* @"D_method_f", i32 (%"struct.E"*)* @"E_method_g"}
+define i32 @"main"(%"struct.Main"* %".1") 
+{
+.3:
+  %".4" = alloca %"struct.Main"*
+  store %"struct.Main"* %".1", %"struct.Main"** %".4"
+  %".6" = alloca i32
+  store i32 0, i32* %".6"
+  br label %"cond"
+cond:
+  %".9" = load i32, i32* %".6"
+  %".10" = icmp sle i32 %".9", 10
+  br i1 %".10", label %"loop", label %"after_loop"
+loop:
+  %".12" = alloca %"struct.Object"*
+  %".13" = call %"struct.Object"* @"Object_new"()
+  store %"struct.Object"* %".13", %"struct.Object"** %".12"
+  %".15" = load %"struct.Main"*, %"struct.Main"** %".4"
+  %".16" = icmp eq %"struct.Main"* %".15", null
+  %".17" = load %"struct.Object"*, %"struct.Object"** %".12"
+  %".18" = getelementptr inbounds %"struct.Object", %"struct.Object"* %".17", i32 0, i32 0
+  %".19" = load %"struct.ObjectVTable"*, %"struct.ObjectVTable"** %".18"
+  %".20" = getelementptr inbounds %"struct.ObjectVTable", %"struct.ObjectVTable"* %".19", i32 0, i32 2
+  %".21" = load %"struct.Object"* (%"struct.Object"*, i32)*, %"struct.Object"* (%"struct.Object"*, i32)** %".20"
+  %".22" = load i32, i32* %".6"
+  %".23" = call %"struct.Object"* %".21"(%"struct.Object"* %".17", i32 %".22")
+  %".24" = load i32, i32* %".6"
+  %".25" = add i32 %".24", 1
+  store i32 %".25", i32* %".6"
+  br label %"cond"
+after_loop:
+  ret i32 1
+}
+
+@"Main_vtable" = constant %"struct.MainVTable" {%"struct.Object"* (%"struct.Object"*, i8*)* @"Object_print", %"struct.Object"* (%"struct.Object"*, i1)* @"Object_printBool", %"struct.Object"* (%"struct.Object"*, i32)* @"Object_printInt32", i8* (%"struct.Object"*)* @"Object_inputLine", i1 (%"struct.Object"*)* @"Object_inputBool", i32 (%"struct.Object"*)* @"Object_inputInt32", i32 (%"struct.Main"*)* @"main"}
+@"str0" = constant [2 x i8] c"s\00"
+@"str1" = constant [3 x i8] c"sa\00"
+@"str2" = constant [2 x i8] c"d\00"
+@"str3" = constant [2 x i8] c"e\00"

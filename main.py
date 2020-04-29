@@ -128,6 +128,41 @@ if __name__ == '__main__':
         # Generate LLVM IR
         codeStr = generateLLVM(updatedAst, gst, file_name)
 
+        # Append the llvm code to the object.ll
+        fObject = open("object.ll", "r")
+        objectCode = fObject.read()
+        codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
+
+        # Print the llvm code
+        print(codeStr)
+
+    else:
+        # Set file_name
+        file_name = args.llvm.split('\\')[-1:][0]
+
+        # Create lexer
+        mylex = MyLexer(file_name)
+        mylex.build() # Build the lexer
+        mylex.lexer.line_end_pos = -1
+        mylex.lexer.line_end_pos_table = [0]
+
+        # Create parser
+        mypars = MyParser(mylex, file_name)
+        mypars.build(debug=False) # Build the parser
+
+        # Give the parser some input
+        f = open(args.llvm, "r")
+        data = f.read()
+        ast = mypars.parser.parse(data)
+
+        # Check semantic
+        updatedAstInfo = checkSemantic(ast, file_name)
+        updatedAst = updatedAstInfo[0]
+        gst = updatedAstInfo[1]
+
+        # Generate LLVM IR
+        codeStr = generateLLVM(updatedAst, gst, file_name)
+
         # Append to object.ll
         fObject = open("object.ll", "r")
         objectCode = fObject.read()
@@ -137,7 +172,3 @@ if __name__ == '__main__':
         codefile = open("llvmTest.ll", "w")
         codefile.write(codeStr)
         codefile.close()
-
-    else:
-        sys.stderr.write("Argument missing : Path to the input VSOP source code.\n")
-        sys.exit(1)
