@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # main.py --lex <SOURCE-FILE>
 #
-# Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
+# Made by Simon Bernard and Ivan Klapka for the compilers project
 # University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
 # -----------------------------------------------------------------------------
 import argparse
@@ -14,16 +14,17 @@ from myLLVMGenerator import *
 if __name__ == '__main__':
     # Parsing arguments
     parser_arg = argparse.ArgumentParser()
-    parser_arg.add_argument('-lex', help='Path to the input VSOP source code for lexical analysis')
-    parser_arg.add_argument('-parse', help='Path to the input VSOP source code for syntax analysis')
-    parser_arg.add_argument('-check', help='Path to the input VSOP source code for semantic analysis')
-    parser_arg.add_argument('-llvm', help='Path to the input VSOP source code for generating the LLVM IR')
+    parser_arg.add_argument('path', help='Path to the input VSOP source code')
+    parser_arg.add_argument('-lex', help='Part 1 : lexical analysis', action="store_true")
+    parser_arg.add_argument('-parse', help='Part 2 : syntax analysis', action="store_true")
+    parser_arg.add_argument('-check', help='Part 3 : semantic analysis', action="store_true")
+    parser_arg.add_argument('-llvm', help='Part 4 : generating the LLVM IR', action="store_true")
     args = parser_arg.parse_args()
 
-    # Check for path
+    # Check for wich argument was selected
     if args.lex:
         # Set file_name
-        file_name = args.lex.split('\\')[-1:][0]
+        file_name = args.path.split('\\')[-1:][0]
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -31,7 +32,7 @@ if __name__ == '__main__':
         mylex.lexer.line_end_pos_table = [0]
 
         # Give the lexer some input
-        f = open(args.lex, "r")
+        f = open(args.path, "r")
         data = f.read()
         mylex.lexer.input(data)
 
@@ -60,7 +61,7 @@ if __name__ == '__main__':
 
     elif args.parse:
         # Set file_name
-        file_name = args.parse.split('\\')[-1:][0]
+        file_name = args.path.split('\\')[-1:][0]
 
         # Create lexer
         mylex = MyLexer(file_name)
@@ -73,14 +74,14 @@ if __name__ == '__main__':
         mypars.build(debug=False) # Build the parser
 
         # Give the parser some input
-        f = open(args.parse, "r")
+        f = open(args.path, "r")
         data = f.read()
         out = mypars.parser.parse(data)
         print(out)
 
     elif args.check:
         # Set file_name
-        file_name = args.check.split('\\')[-1:][0]
+        file_name = args.path.split('\\')[-1:][0]
 
         # Create lexer
         mylex = MyLexer(file_name)
@@ -93,7 +94,7 @@ if __name__ == '__main__':
         mypars.build(debug=False) # Build the parser
 
         # Give the parser some input
-        f = open(args.check, "r")
+        f = open(args.path, "r")
         data = f.read()
         ast = mypars.parser.parse(data)
 
@@ -103,7 +104,7 @@ if __name__ == '__main__':
 
     elif args.llvm:
         # Set file_name
-        file_name = args.llvm.split('\\')[-1:][0]
+        file_name = args.path.split('\\')[-1:][0]
 
         # Create lexer
         mylex = MyLexer(file_name)
@@ -116,7 +117,7 @@ if __name__ == '__main__':
         mypars.build(debug=False) # Build the parser
 
         # Give the parser some input
-        f = open(args.llvm, "r")
+        f = open(args.path, "r")
         data = f.read()
         ast = mypars.parser.parse(data)
 
@@ -128,17 +129,17 @@ if __name__ == '__main__':
         # Generate LLVM IR
         codeStr = generateLLVM(updatedAst, gst, file_name)
 
-        # Append the llvm code to the object.ll
+        # Append to object.ll
         fObject = open("object.ll", "r")
         objectCode = fObject.read()
         codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
 
-        # Print the llvm code
+        # Print the llvm IR code
         print(codeStr)
 
     else:
         # Set file_name
-        file_name = args.llvm.split('\\')[-1:][0]
+        file_name = args.path.split('\\')[-1:][0]
 
         # Create lexer
         mylex = MyLexer(file_name)
@@ -151,7 +152,7 @@ if __name__ == '__main__':
         mypars.build(debug=False) # Build the parser
 
         # Give the parser some input
-        f = open(args.llvm, "r")
+        f = open(args.path, "r")
         data = f.read()
         ast = mypars.parser.parse(data)
 

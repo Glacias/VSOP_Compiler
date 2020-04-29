@@ -24,8 +24,6 @@ def generateLLVM(ast, gst, file):
 	# Launch it on the tree
 	ast.codeGen(lgen)
 
-	print(lgen.module)
-
 	#Remove the first two lines
 	codeStr = lgen.module.__str__().split("\n",2)[2];
 
