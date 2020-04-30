@@ -638,6 +638,9 @@ class Expr_assign(Expr):
 
         # If it does not exist, it is a field
         else:
+            # If unit, skip it
+            if self.typeChecked == "unit":
+                return lgen.void
             # Get the ptr to ptr to self
             ptrptrSelf = st.lookup("self")
             # Load it
@@ -1028,6 +1031,9 @@ class Expr_Object_identifier(Expr):
             value = bldr.load(ptrId)
         # If it does not exist, it is a field
         else:
+            # If unit, skip it
+            if self.typeChecked == "unit":
+                return lgen.void
             # Get the ptr to ptr to self
             ptrptrSelf = st.lookup("self")
             # Load it
@@ -1083,7 +1089,7 @@ class Expr_Unit(Expr):
         return self.typeChecked
     # Generate code for unit
     def codeGenExpr(self, lgen, className, bldr, st):
-        return lgen.void()
+        return lgen.void
 
 class Args(Node):
     def __init__(self):

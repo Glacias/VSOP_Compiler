@@ -178,14 +178,14 @@ if __name__ == '__main__':
 
         # Create a file that will old the llvm code string
         file_title = file_name[:-5]
-        codefile = open(file_title + ".ll", "w")
+        codefile = open(file_title + "_to_compile.ll", "w")
         codefile.write(codeStr)
         codefile.close()
 
         # Compile the llvm
-        cmd1 = "llc-9 " + file_title + ".ll"
+        cmd1 = "llc-9 " + file_title + "_to_compile.ll"
         os.system(cmd1)
 
         # Create the executable
-        cmd2 = "clang " + file_title + ".s -o " + file_title + " -lm" 
+        cmd2 = "clang " + file_title + "_to_compile.s -o " + file_title + " -lm" 
         os.system(cmd2)

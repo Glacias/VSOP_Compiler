@@ -6,7 +6,7 @@ class D {
 }
 
 class E extends D {
-    g() : int32 { let o1 : Object <- new Object in { self; o1.print("e") }; 2 }
+    g() : int32 { let o1 : Object <- new Object in { self; o1.print("e") }; a <- (); 2 }
 }
 
 class Main {
