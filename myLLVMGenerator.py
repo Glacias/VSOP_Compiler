@@ -24,10 +24,8 @@ def generateLLVM(ast, gst, file):
 	# Launch it on the tree
 	ast.codeGen(lgen)
 
-	#Remove the first two lines
-	codeStr = lgen.module.__str__().split("\n",2)[2];
-
-	return codeStr
+	# Return the lgen holding the code
+	return lgen
 
 
 class llvmGenerator:

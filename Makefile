@@ -5,6 +5,7 @@ install-tools:
 	yes | sudo pip3 install ply
 	yes | sudo pip3 install pyinstaller
 	yes | sudo pip3 install argparse
+	yes | sudo pip3 install llvmlite
 
 # Create executable of compiler
 vsopc:

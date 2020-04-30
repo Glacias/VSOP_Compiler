@@ -2,10 +2,11 @@
 # main.py --lex <SOURCE-FILE>
 #
 # Made by Simon Bernard and Ivan Klapka for the compilers project
-# University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
+# University of Liege - Academic year 2019-2020 - INFO0085-1 Compilers course
 # -----------------------------------------------------------------------------
 import argparse
 import sys
+import os
 from mylexer import *
 from myparser import *
 from mySemanticAnalysis import *
@@ -127,7 +128,10 @@ if __name__ == '__main__':
         gst = updatedAstInfo[1]
 
         # Generate LLVM IR
-        codeStr = generateLLVM(updatedAst, gst, file_name)
+        lgen = generateLLVM(updatedAst, gst, file_name)
+
+        #Remove the first two lines
+        codeStr = lgen.module.__str__().split("\n",2)[2];
 
         # Append to object.ll
         fObject = open("object.ll", "r")
@@ -162,7 +166,10 @@ if __name__ == '__main__':
         gst = updatedAstInfo[1]
 
         # Generate LLVM IR
-        codeStr = generateLLVM(updatedAst, gst, file_name)
+        lgen = generateLLVM(updatedAst, gst, file_name)
+
+        #Remove the first two lines
+        codeStr = lgen.module.__str__().split("\n",2)[2];
 
         # Append to object.ll
         fObject = open("object.ll", "r")
@@ -170,6 +177,15 @@ if __name__ == '__main__':
         codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
 
         # Create a file that will old the llvm code string
-        codefile = open("llvmTest.ll", "w")
+        file_title = file_name[:-5]
+        codefile = open(file_title + ".ll", "w")
         codefile.write(codeStr)
         codefile.close()
+
+        # Compile the llvm
+        cmd1 = "llc-9 " + file_title + ".ll"
+        os.system(cmd1)
+
+        # Create the executable
+        cmd2 = "clang " + file_title + ".s -o " + file_title + " -lm" 
+        os.system(cmd2)
