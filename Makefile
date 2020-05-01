@@ -9,11 +9,5 @@ install-tools:
 
 # Create executable of compiler
 vsopc:
-	pyinstaller \
-		--onefile main.py \
-		--distpath ./ \
-		--clean \
-		--name vsopc \
-		--specpath ./build \
-		--workpath ./build \
-		--add-data ../parsetab.py:/ \
+	mv main.py vsopc
+	chmod +x vsopc

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -----------------------------------------------------------------------------
 # main.py --lex <SOURCE-FILE>
 #
@@ -7,10 +8,12 @@
 import argparse
 import sys
 import os
+from llvmlite import ir
 from mylexer import *
 from myparser import *
 from mySemanticAnalysis import *
 from myLLVMGenerator import *
+from myObject import *
 
 if __name__ == '__main__':
     # Parsing arguments
@@ -134,8 +137,8 @@ if __name__ == '__main__':
         codeStr = lgen.module.__str__().split("\n",2)[2];
 
         # Append to object.ll
-        fObject = open("object.ll", "r")
-        objectCode = fObject.read()
+        #fObject = open("object.ll", "r")
+        objectCode = getObjectLL() #fObject.read()
         codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
 
         # Print the llvm IR code
@@ -172,8 +175,9 @@ if __name__ == '__main__':
         codeStr = lgen.module.__str__().split("\n",2)[2];
 
         # Append to object.ll
-        fObject = open("object.ll", "r")
-        objectCode = fObject.read()
+        #fObject = open("object.ll", "r")
+        objectCode = getObjectLL() #fObject.read()
+        #objectCode = fObject.read()
         codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
 
         # Create a file that will old the llvm code string

@@ -9,7 +9,6 @@ import sys
 import queue
 from myAST import *
 from mySemanticAnalysis import globalSymbolTable
-
 from llvmlite import ir
 from collections import OrderedDict
 
@@ -140,12 +139,17 @@ class llvmGenerator:
 		malloc = ir.Function(moduleObject, malloc_fnty, name='malloc')
 		initDict["_malloc"] = malloc # will not collide with class because class start with a maj
 
-		# Declare the pow function from c
+		# Declare the pow function from C library
 		power_fnty = ir.FunctionType(self.double, [self.double, self.double])
 		power = ir.Function(self.module, power_fnty, name='pow')
 		# Also declare the function to cast for int
 		power_fnty_int = ir.FunctionType(self.int32, [self.int32, self.int32]).as_pointer()
 		initDict["_pow"] = [power, power_fnty_int]
+
+		# Declare the strcmp from C library
+		strcmp_fnty = ir.FunctionType(self.int32, [self.int8.as_pointer(), self.int8.as_pointer()])
+		strcmp = ir.Function(self.module, strcmp_fnty, name='strcmp')
+		initDict["_strcmp"] = strcmp
 
 		return initDict
 

@@ -215,7 +215,23 @@ class Field(Node):
         fieldType = lgen.initDict[className][2][self.name][1]
         # If there is not initial expr, set to null
         if self.init_expr == "":
-            return ir.Constant(fieldType, None)
+            # For string declare an empty string
+            if self.type.type == "string":
+                # Create a global constant
+                string1 = "\0"
+                c_string1 = ir.Constant(ir.ArrayType(ir.IntType(8), len(string1)), bytearray(string1.encode("utf-8")))
+                global_string1 = ir.GlobalVariable(lgen.module, c_string1.type, name=("str" + str(lgen.nbrStr)))
+                lgen.nbrStr = lgen.nbrStr + 1
+                global_string1.linkage = ''
+                global_string1.global_constant = True
+                global_string1.initializer = c_string1
+
+                # Return a pointer to the global constant
+                pt = bldr.gep(global_string1, [lgen.int32(0), lgen.int32(0)], inbounds=True)
+                return pt
+            else:
+                # Return null
+                return ir.Constant(fieldType, None)
         else:
             # Create empty symbol table
             st = symbolTable()
@@ -277,31 +293,51 @@ class Method(Node):
         # Create the builder on that block
         bldr = ir.IRBuilder(block)
 
-        # Create a symbol table for the arguments (and self)
-        st = symbolTable()
-        # Add the arguments
-        args = metInitDictInfo[2].args
-        # Allocate space for self
-        ptr = bldr.alloca(args[0].type)
-        # Store the value of self
-        bldr.store(args[0], ptr)
-        # Bind the pointer to self to the symbol table
-        st.bind("self", ptr)
-        i = 1 # Start at 1 to skip self
-        for fm in self.formals.list_formals:
-            # Allocate space for the arg
-            ptr = bldr.alloca(args[i].type)
-            # Store the value of the arg
-            bldr.store(args[i], ptr)
-            # Bind the pointer to the symbol table
-            st.bind(fm.name, ptr)
-            i = i + 1
+        # Main exception
+        if className == "Main" and self.name == "main":
+            # Create a symbol table for self
+            st = symbolTable()
+            # Add the arguments
+            args = metInitDictInfo[2].args
+            # Allocate space for self
+            ptr = bldr.alloca(args[0].type)
+            # Get the info of the class
+            funcNew = lgen.initDict["Main"][4]
+            # Call the new method of the object an return the value
+            mainObj = bldr.call(funcNew, ())
+            # Store the value of self
+            bldr.store(mainObj, ptr)
+            # Bind the pointer to self to the symbol table
+            st.bind("self", ptr)
+        else :
+            # Create a symbol table for the arguments (and self)
+            st = symbolTable()
+            # Add the arguments
+            args = metInitDictInfo[2].args
+            # Allocate space for self
+            ptr = bldr.alloca(args[0].type)
+            # Store the value of self
+            bldr.store(args[0], ptr)
+            # Bind the pointer to self to the symbol table
+            st.bind("self", ptr)
+            i = 1 # Start at 1 to skip self
+            for fm in self.formals.list_formals:
+                # Allocate space for the arg
+                ptr = bldr.alloca(args[i].type)
+                # Store the value of the arg
+                bldr.store(args[i], ptr)
+                # Bind the pointer to the symbol table
+                st.bind(fm.name, ptr)
+                i = i + 1
 
         # Launch the builder on the block
         value = self.block.codeGenExpr(lgen, className, bldr, st)
-
-        # Return the value
-        bldr.ret(value)
+        # If a void comes, return void
+        if value == lgen.void:
+            bldr.ret_void()
+        else: 
+            # Return the value
+            bldr.ret(value)
 
 
 class Type(Node):
@@ -448,22 +484,37 @@ class Expr_if(Expr):
                 value = self.then_expr.codeGenExpr(lgen, className, bldr, st)
             return lgen.void
 
-        # if then else
-        else:
+        # In the case of a unit
+        elif self.typeChecked == "unit":
+            # Launch if else
             with bldr.if_else(pred) as (then, otherwise):
                 with then:
-                    blockThen = bldr.block
                     value_then = self.then_expr.codeGenExpr(lgen, className, bldr, st)
                 with otherwise:
-                    blockOtherwise = bldr.block
                     value_otherwise = self.else_expr.codeGenExpr(lgen, className, bldr, st)
+            return lgen.void
+
+        # if then else
+        else:
             # Get the type
             typeIf = lgen.initDict[self.typeChecked][0]
-            # Return the value of the branch that was executed
-            value = bldr.phi(typeIf)
-            value.add_incoming(value_then, blockThen)
-            value.add_incoming(value_otherwise, blockOtherwise)
-            return value
+            # Allocate memory for return type
+            ptrIf = bldr.alloca(typeIf)
+            # Launch if else
+            with bldr.if_else(pred) as (then, otherwise):
+                with then:
+                    value_then = self.then_expr.codeGenExpr(lgen, className, bldr, st)
+                    # Cast the value to the good type
+                    vcast_then = bldr.bitcast(value_then, typeIf)
+                    # Store the value
+                    bldr.store(vcast_then, ptrIf)
+                with otherwise:
+                    value_otherwise = self.else_expr.codeGenExpr(lgen, className, bldr, st)
+                    # Cast the value to the good type
+                    vcast_otherwise = bldr.bitcast(value_otherwise, typeIf)
+                    # Store the value
+                    bldr.store(vcast_otherwise, ptrIf)
+            return bldr.load(ptrIf)
 
 class Expr_while(Expr):
     def __init__(self, cond_expr, body_expr):
@@ -579,8 +630,10 @@ class Expr_let(Expr):
         if self.init_expr != "":
             # Get the value
             v = self.init_expr.codeGenExpr(lgen, className, bldr, st)
+            # Cast the value in the allocate pointer type
+            vcast = bldr.bitcast(v, typeId)
             # Store the value of the arg
-            bldr.store(v, ptr)
+            bldr.store(vcast, ptr)
         else:
             # Create a null constant
             v = ir.Constant(typeId, None)
@@ -626,6 +679,8 @@ class Expr_assign(Expr):
 
     # Generate code for an assign
     def codeGenExpr(self, lgen, className, bldr, st):
+        # Get the type of the id
+        typeId = lgen.initDict[self.typeChecked][0]
         # Get the value of the expr
         value = self.expr.codeGenExpr(lgen, className, bldr, st)
         # Get the ptr to the identifier
@@ -633,8 +688,10 @@ class Expr_assign(Expr):
 
         # Check it exist
         if ptrId is not None:
+            # Cast the value in the allocate pointer type
+            vcast = bldr.bitcast(value, typeId)
             # Store the new value in the identifier
-            bldr.store(value, ptrId)
+            bldr.store(vcast, ptrId)
 
         # If it does not exist, it is a field
         else:
@@ -650,8 +707,10 @@ class Expr_assign(Expr):
             nbrField = llvmInfoField[0]
             # Get the pointer to the field
             ptrField = bldr.gep(ptrSelf, [lgen.int32(0), lgen.int32(nbrField)], inbounds=True)
+            # Cast the value in the allocate pointer type
+            vcast = bldr.bitcast(value, llvmInfoField[1])
             # Store the value in the field
-            bldr.store(value, ptrField)
+            bldr.store(vcast, ptrField)
 
         return value
 
@@ -836,14 +895,48 @@ class Expr_BinOp(Expr):
 
     # Generate code for binary operator
     def codeGenExpr(self, lgen, className, bldr, st):
-        # Get the value of both expr
-        valueLeft = self.left_expr.codeGenExpr(lgen, className, bldr, st)
-        valueRight = self.right_expr.codeGenExpr(lgen, className, bldr, st)
-        # And
+        # And (short circuit)
         if self.op ==  "and":
-            return bldr.and_(valueLeft, valueRight)
+            # Allocate a bit
+            ptrBit = bldr.alloca(lgen.boolean)
+            # Get the left value
+            valueLeft = self.left_expr.codeGenExpr(lgen, className, bldr, st)
+            # Store the left value
+            bldr.store(valueLeft, ptrBit)
+            with bldr.if_then(valueLeft):
+                # Get the right value
+                valueRight = self.right_expr.codeGenExpr(lgen, className, bldr, st)
+                # Store it
+                bldr.store(valueRight, ptrBit)
+            # Return the value of the and
+            return bldr.load(ptrBit)
+        else:
+            # Get the value of both expr
+            valueLeft = self.left_expr.codeGenExpr(lgen, className, bldr, st)
+            valueRight = self.right_expr.codeGenExpr(lgen, className, bldr, st)
+
         # Equal
-        elif self.op == "=":
+        if self.op == "=":
+            # Strings
+            if self.left_expr.typeChecked == "string":
+                # Get the info of strcmp
+                strcmp_f = lgen.initDict.get("_strcmp")
+                # Call strcmp
+                i32 = bldr.call(strcmp_f, [valueLeft, valueRight])
+                return bldr.icmp_signed("==", i32, lgen.int32(0))
+            # Unit
+            if self.left_expr.typeChecked == "unit":
+                return lgen.boolean(1)
+            # Objects
+            if not isPrimitive(self.left_expr.typeChecked):
+                # Get the type of object
+                typeObj = lgen.initDict["Object"][0]
+                # Cast both to object ptr
+                adr1 = bldr.bitcast(valueLeft, typeObj)
+                adr2 = bldr.bitcast(valueRight, typeObj)
+                # Compare their adress
+                return bldr.icmp_signed("==", adr1, adr2)
+
             return bldr.icmp_signed("==", valueLeft, valueRight)
         # Lower
         elif self.op == "<":
@@ -988,11 +1081,15 @@ class Expr_Call(Expr):
 
         # Get the arguments
         ls_args = [ptrObj]
+        i = 1
         for arg in self.args.list_args:
             # Get the value of the arg
             value = arg.codeGenExpr(lgen, className, bldr, st)
+            # Cast the arg
+            vcast = bldr.bitcast(value, metInfo[1].args[i])
             # Add it to the list
-            ls_args.append(value)
+            ls_args.append(vcast)
+            i = i + 1
 
         # Call the method
         return bldr.call(met, ls_args)
@@ -1131,10 +1228,26 @@ class Literal(Node):
         # str
         elif isinstance(self.literal, str):
             # Add the null char at the end
-            string1 = self.literal[1:-1] + '\0'
+            string1 = self.literal[1:-1]
+
+            # Change the \xXX to char
+            i = 0
+            listChar = []
+            while i < len(string1):
+                c = string1[i]
+                if c == '\\':
+                    nbrStr = "0x" + string1[i+2] + string1[i+3]
+                    intc = int(nbrStr, 16)
+                    listChar.append(chr(intc))
+                    i = i + 4
+                else:
+                    listChar.append(c)
+                    i = i + 1
+            listChar.append("\0")
+            string1 = "".join(listChar)
 
             # Create a global constant
-            c_string1 = ir.Constant(ir.ArrayType(ir.IntType(8), len(string1)), bytearray(string1.encode("utf8")))
+            c_string1 = ir.Constant(ir.ArrayType(ir.IntType(8), len(string1)), bytearray(string1.encode("utf-8")))
             global_string1 = ir.GlobalVariable(lgen.module, c_string1.type, name=("str" + str(lgen.nbrStr)))
             lgen.nbrStr = lgen.nbrStr + 1
             global_string1.linkage = ''
