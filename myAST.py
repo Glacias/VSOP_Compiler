@@ -1,3 +1,11 @@
+# -----------------------------------------------------------------------------
+# myAST.py
+#
+# File used for the syntax and semantic analysis as well as code generation
+# Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
+# University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
+# -----------------------------------------------------------------------------
+
 from llvmlite import ir
 
 ##### Classes for AST
@@ -370,7 +378,12 @@ class Formal(Node):
         str = self.name + " : " + self.type.__str__()
         return str
 
-class Block(Node):
+
+## Expressions
+class Expr(Node):
+    pass
+
+class Block(Expr):
     def __init__(self):
         Node.__init__(self)
         self.list_expr = []
@@ -412,10 +425,6 @@ class Block(Node):
         st.exit_ctx()
         # Return the value of the last expr
         return value
-
-## Expressions
-class Expr(Node):
-    pass
 
 class Expr_if(Expr):
     def __init__(self, cond_expr, then_expr):
@@ -1197,7 +1206,7 @@ class Args(Node):
     def add_arg(self, arg):
         self.list_args.append(arg)
 
-class Literal(Node):
+class Literal(Expr):
     def __init__(self, literal):
         Node.__init__(self)
         self.literal = literal

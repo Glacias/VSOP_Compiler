@@ -2,7 +2,7 @@
 # myparser.py
 #
 # File responsible for the syntax analysis
-# Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
+# Made by Simon Bernard and Ivan Klapka for the Project 2 : syntax analysis
 # University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
 # -----------------------------------------------------------------------------
 
@@ -41,6 +41,7 @@ class MyParser(object):
         self.parser = yacc.yacc(module=self, **kwargs)
 
     ### Rules for parsing
+    # In rules expression, tokens will start with a lowercase letter and rules with an uppercase letter
     def p_Program(self, p):
         '''Program : Class
                    | Program Class'''
@@ -112,12 +113,11 @@ class MyParser(object):
         if(len(p)==1):
             p[0] = Formals()
             # Empty formals does not have valid position
-            #p[0].add_position(p.lineno(0), p.lexpos(0) - p.lexer.line_end_pos_table[p.lineno(0)-1])
         elif(len(p)==2):
             p[0] = Formals()
             p[0].add_formal(p[1])
             p[0].add_position_from_node(p[1])
-            #p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+            
         else:
             p[0] = p[1]
             p[0].add_formal(p[3])
@@ -130,8 +130,6 @@ class MyParser(object):
     def p_Block(self, p):
         'Block : lbrace Block_body rbrace'
         p[0] = p[2]
-        # Add this line to make the block point to the lbrace rather than last expr
-        #p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Block_body(self, p):
         '''Block_body : Expr
@@ -213,7 +211,7 @@ class MyParser(object):
             p[0] = Expr_Call(p[3], p[5])
             p[0].add_object_expr(p[1])
             p[0].add_position_from_node(p[1])
-            #p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+            
 
     def p_Expr_New(self, p):
         'Expr : new type_identifier'
@@ -229,7 +227,7 @@ class MyParser(object):
         'Expr : Literal'
         p[0] = p[1]
         p[0].add_position_from_node(p[1])
-        #p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        
 
     def p_Expr_Unit(self, p):
         'Expr : lpar rpar'
@@ -245,7 +243,7 @@ class MyParser(object):
         'Expr : Block'
         p[0] = p[1]
         p[0].add_position_from_node(p[1])
-        #p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        
 
     def p_Args(self, p):
         '''Args :
@@ -253,12 +251,10 @@ class MyParser(object):
                 | Args comma Expr'''
         if(len(p)==1):
             p[0] = Args()
-            #p[0].add_position(p.lineno(0), p.lexpos(0) - p.lexer.line_end_pos_table[p.lineno(0)-1])
         elif(len(p)==2):
             p[0] = Args()
             p[0].add_arg(p[1])
             p[0].add_position_from_node(p[1])
-            #p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
         else:
             p[0] = p[1]
             p[0].add_arg(p[3])

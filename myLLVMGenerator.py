@@ -2,7 +2,7 @@
 # myLLVMGenerator.py
 #
 # File responsible for the LLVM IR code generation
-# Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
+# Made by Simon Bernard and Ivan Klapka for the Project 4 : code generation
 # University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
 # -----------------------------------------------------------------------------
 import sys
@@ -12,7 +12,8 @@ from mySemanticAnalysis import globalSymbolTable
 from llvmlite import ir
 from collections import OrderedDict
 
-
+# generateLLVM is the main function of the code generation
+#  It return the llvm generator
 def generateLLVM(ast, gst, file):
 	# Create the llvm code generator
 	lgen = llvmGenerator(ast, gst, file)
@@ -26,10 +27,10 @@ def generateLLVM(ast, gst, file):
 	# Return the lgen holding the code
 	return lgen
 
-
+# This class is responsible for storing all the useful
+# information linked to code generation
 class llvmGenerator:
 	def __init__(self, ast, gst, file):
-
 		# Get the tree and global symbol table
 		self.ast = ast
 		self.gst = gst
@@ -56,7 +57,7 @@ class llvmGenerator:
 		# Save the number of string created
 		self.nbrStr = 0
 
-
+	# Return a dictionnary for initialisation of the vtable and structures
 	def initializeStructAndVTables(self, ast, gst):
 		# Create the dictonnary
 		initDict = {}
@@ -98,12 +99,6 @@ class llvmGenerator:
 		# Set the body of the VTable
 		structObjVTable.set_body(object_print_fnty.as_pointer(), object_printBool_fnty.as_pointer(), object_printInt32_fnty.as_pointer(), object_inputLine_fnty.as_pointer(), object_inputBool_fnty.as_pointer(), object_inputInt32_fnty.as_pointer())
 
-		# Set the vtable constant
-		#c = ir.Constant(structObjVTable, (object_print, object_printBool, object_printInt32, object_inputLine, object_inputBool, object_inputInt32))
-		#g = ir.GlobalVariable(self.module, c.type, "c")
-		#g.initializer = c
-		#g.global_constant = True
-
 		# Structure Object Dict
 		structObjDict = OrderedDict()
 
@@ -128,10 +123,11 @@ class llvmGenerator:
 		# Init Dict Info contains :
 		# 0) The identified struct of the object
 		# 1) The identified struct of the object's vtable
-		# 2) The dictionnary of types
+		# 2) The dictionnary of field's types
 		# 3) The dictionnary of methods (vtable)
 		# 4) The object_new
 		# 5) The object_init
+		# 6) The constant vtable (except for Object)
 		initDict["Object"] = [structObj.as_pointer(), structObjVTable, structObjDict, vtableObjDict, object_new, object_init]
 
 		# Store the declaration of malloc (but avoid redeclaring it)
@@ -154,8 +150,8 @@ class llvmGenerator:
 		return initDict
 
 
-	# This function is responsible for creating code for all the classes
-	# TODO : Main exception
+	# This function is responsible for creating declaration code for all the classes
+	#  and fill the init dictionary with the corresponding useful information
 	def generateAllClass(self):
 		# Declare all class structure and VTable (before their body) and their method new and init
 		for cl in self.ast.list_class:

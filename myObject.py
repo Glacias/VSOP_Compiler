@@ -1,4 +1,13 @@
+# -----------------------------------------------------------------------------
+# myObject.py
+#
+# File used for the LLVM IR code generation
+# Made by Simon Bernard and Ivan Klapka for the Project 4 : lexical analysis
+# University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
+# -----------------------------------------------------------------------------
 
+# The only reason this file exist is to return the string for object.ll
+# Reading directly from object.ll was not working on the submission plateform so we had to improvise
 def getObjectLL():
 	objectllstr = """ ; This file is mostly generated from the C code, with just a touch of cleanup
 ; by hand to make it more portable and legible.

@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# mylexer.py
+# myLexer.py
 #
 # File responsible for the lexical analysis
 # Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
@@ -62,13 +62,13 @@ class MyLexer(object):
         'string_literal'] + keyword + list(operator.values())
 
 
-
     # Init
     def __init__(self, file):
         global file_name
         file_name = file
 
     ###  Tokens
+
     # Single line comment
     def t_singlelinecomment(self, t):
         r'//.*'
@@ -85,6 +85,7 @@ class MyLexer(object):
         r'[ \t\r\f]'
 
     #####  Additionnal mode
+
     # Declare the states/modes of the lexer
     states = (
         ('commentmode','exclusive'),
@@ -92,6 +93,7 @@ class MyLexer(object):
     )
 
     ####  Comment Mode
+
     # Match the first (*. Enter commentmode state.
     def t_nestedcomment(self, t):
         r'\(\*'
@@ -133,6 +135,7 @@ class MyLexer(object):
         t.lexer.skip(1)
 
     ####  String mode
+
     def t_stringstart(self, t):
         r'"'
         t.lexer.string_start_line = t.lexer.lineno   # Record the starting position

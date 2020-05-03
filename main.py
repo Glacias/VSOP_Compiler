@@ -9,8 +9,8 @@ import argparse
 import sys
 import os
 from llvmlite import ir
-from mylexer import *
-from myparser import *
+from myLexer import *
+from myParser import *
 from mySemanticAnalysis import *
 from myLLVMGenerator import *
 from myObject import *
@@ -25,7 +25,8 @@ if __name__ == '__main__':
     parser_arg.add_argument('-llvm', help='Part 4 : generating the LLVM IR', action="store_true")
     args = parser_arg.parse_args()
 
-    # Check for wich argument was selected
+    # Check for which argument was selected
+    # Lexical analysis
     if args.lex:
         # Set file_name
         file_name = args.path.split('\\')[-1:][0]
@@ -63,6 +64,7 @@ if __name__ == '__main__':
                 token_str = str(tok.lineno) + "," + str(tok.lexpos - mylex.lexer.line_end_pos) + "," + tok.type.replace("_","-")
                 print(token_str)
 
+    # Syntax analysis
     elif args.parse:
         # Set file_name
         file_name = args.path.split('\\')[-1:][0]
@@ -83,6 +85,7 @@ if __name__ == '__main__':
         out = mypars.parser.parse(data)
         print(out)
 
+    # Semantic analysis
     elif args.check:
         # Set file_name
         file_name = args.path.split('\\')[-1:][0]
@@ -106,6 +109,7 @@ if __name__ == '__main__':
         updatedAstInfo = checkSemantic(ast, file_name)
         print(updatedAstInfo[0])
 
+    # Code generation
     elif args.llvm:
         # Set file_name
         file_name = args.path.split('\\')[-1:][0]
@@ -137,13 +141,13 @@ if __name__ == '__main__':
         codeStr = lgen.module.__str__().split("\n",2)[2];
 
         # Append to object.ll
-        #fObject = open("object.ll", "r")
-        objectCode = getObjectLL() #fObject.read()
+        objectCode = getObjectLL()
         codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
 
         # Print the llvm IR code
         print(codeStr)
 
+    # Create executable
     else:
         # Set file_name
         file_name = args.path.split('\\')[-1:][0]
@@ -175,9 +179,7 @@ if __name__ == '__main__':
         codeStr = lgen.module.__str__().split("\n",2)[2];
 
         # Append to object.ll
-        #fObject = open("object.ll", "r")
-        objectCode = getObjectLL() #fObject.read()
-        #objectCode = fObject.read()
+        objectCode = getObjectLL()
         codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
 
         # Create a file that will old the llvm code string

@@ -2,13 +2,15 @@
 # mySemanticAnalysis.py
 #
 # File responsible for the semantic analysis
-# Made by Simon Bernard and Ivan Klapka for the Project 1 : lexical analysis
+# Made by Simon Bernard and Ivan Klapka for the Project 3 : semantic analysis
 # University of Liège - Academic year 2019-2020 - INFO0085-1 Compilers course
 # -----------------------------------------------------------------------------
 import sys
 import queue
 from myAST import *
 
+# checkSemantic is the main function for semantic analysis
+#  It returns the ast as well as the gst
 def checkSemantic(ast, file):
     global file_name
     file_name = file # Save the file name for error reporting
@@ -17,7 +19,7 @@ def checkSemantic(ast, file):
     global typesOfType
     typesOfType = {"int32", "bool", "string", "unit"}
 
-    # Make global symbol table and add all classes to it
+    # Make global symbol table and add all classes into it
     gst = globalSymbolTable()
 
     # Add the Object class
@@ -31,7 +33,7 @@ def checkSemantic(ast, file):
         # - that a field was not defined twice in the same class
         # - that a field is not named self
         # - that a method was not defined twice in the same class
-        # - that a method's formals were not defined twice or named to self
+        # - that a method's formals were not defined twice or named self
         gst.add_class(cl)
         typesOfType.add(cl.name) # Add the class name as a new type of type
 
@@ -42,7 +44,7 @@ def checkSemantic(ast, file):
     # Check for cycles in class inheritance and check that parent are defined
     checkForCycle(ast, gst)
 
-    # Check that a child's field does not overide a parent's field,
+    # Check that a child's field does not override a parent's field,
     #  that an overwriten method has the same signature
     #  and that types in field, methods and formals exist
     #  and fill the ancestor list in the class
@@ -124,7 +126,7 @@ class globalSymbolTable():
 
                     # Add the method with formals
                     # (stored info is the method and dictonnary of formals)
-                    dictMethods[method_class.name] = [method_class, dictFormals, []]
+                    dictMethods[method_class.name] = [method_class, dictFormals]
 
             # Add the class with fields and methods
             # (stored info is the class, dictonnary of fields and dictonnary of methods)
@@ -282,7 +284,7 @@ def checkForCycle(ast, gst):
                 # Add the class to the seen set
                     class_seen.add(current_class_name)
 
-            # Once we reached Object, all nodes seen become checked
+            # Once we reached Object, all nodes seen become checked (merge the sets)
             class_checked = class_checked|class_seen
     # If errors were detected, exit
     if not error_buffer.empty():
