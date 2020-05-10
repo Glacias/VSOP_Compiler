@@ -192,6 +192,10 @@ class llvmGenerator:
 
 			# Keep the number of fields and methods inside the parent
 			nbrField = len(clInitDictInfo[2]) + 1
+			# For each unit field, remove one
+			for n,t in clInitDictInfo[2].items():
+				if t[1] == self.void:
+					nbrField = nbrField - 1
 			nbrMeth = len(clInitDictInfo[3])
 
 			# Add the fields
@@ -223,6 +227,9 @@ class llvmGenerator:
 				# Get the list of llvmlite types of the formals
 				ls_formals = [clInitDictInfo[0]]  # Add the pointer to the class as first argument
 				for fm in mt.formals.list_formals:
+					# Skip the unit
+					if fm.type.type == "unit":
+						continue
 					ls_formals.append(self.initDict[fm.type.type][0])
 
 				# Create the method type

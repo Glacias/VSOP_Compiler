@@ -83,6 +83,9 @@ if __name__ == '__main__':
         f = open(args.path, "r")
         data = f.read()
         out = mypars.parser.parse(data)
+        # Exit if an error was detected
+        if mypars.errFlag:
+            sys.exit(1)
         print(out)
 
     # Semantic analysis
@@ -104,6 +107,9 @@ if __name__ == '__main__':
         f = open(args.path, "r")
         data = f.read()
         ast = mypars.parser.parse(data)
+        # Exit if an error was detected
+        if mypars.errFlag:
+            sys.exit(1)
 
         # Check semantic
         updatedAstInfo = checkSemantic(ast, file_name)
@@ -128,6 +134,9 @@ if __name__ == '__main__':
         f = open(args.path, "r")
         data = f.read()
         ast = mypars.parser.parse(data)
+        # Exit if an error was detected
+        if mypars.errFlag:
+            sys.exit(1)
 
         # Check semantic
         updatedAstInfo = checkSemantic(ast, file_name)
@@ -166,6 +175,9 @@ if __name__ == '__main__':
         f = open(args.path, "r")
         data = f.read()
         ast = mypars.parser.parse(data)
+        # Exit if an error was detected
+        if mypars.errFlag:
+            sys.exit(1)
 
         # Check semantic
         updatedAstInfo = checkSemantic(ast, file_name)

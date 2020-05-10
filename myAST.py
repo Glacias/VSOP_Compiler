@@ -169,11 +169,9 @@ class Class(Node):
                 value_f = fl.codeGen(lgen, self.name, bldrInit)
                 # Get the field position on the table
                 pos_f = clInitDictInfo[2][fl.name][0]
-
                 # If void skip
                 if clInitDictInfo[2][fl.name][1] == lgen.void:
                     continue
-
                 # Get the pointer to the field
                 ptr_f = bldrInit.gep(ptr_obj, [lgen.int32(0), lgen.int32(pos_f)])
                 # Store the value in the field
@@ -237,6 +235,9 @@ class Field(Node):
                 # Return a pointer to the global constant
                 pt = bldr.gep(global_string1, [lgen.int32(0), lgen.int32(0)], inbounds=True)
                 return pt
+            # In the case of unit, return void
+            elif self.type.type == "unit":
+                return lgen.void
             else:
                 # Return null
                 return ir.Constant(fieldType, None)
@@ -330,6 +331,9 @@ class Method(Node):
             st.bind("self", ptr)
             i = 1 # Start at 1 to skip self
             for fm in self.formals.list_formals:
+                # Special case for unit
+                if fm.type.type == "unit":
+                    continue
                 # Allocate space for the arg
                 ptr = bldr.alloca(args[i].type)
                 # Store the value of the arg
@@ -1042,6 +1046,7 @@ class Expr_Call(Expr):
         # First check that there is the same number of args and formals
         if len(list_arg) != len(list_formals):
             error_message_ast(self.line, self.col, "method " + self.method_name + " takes " + str(len(list_formals)) + " argument but " + str(len(list_arg)) + " were given", file_name, error_buffer)
+            return methodInfo[0].type.type # Error recovery
 
         # Check that arguments are the same type (order maters)
         for i in range(len(list_arg)):
@@ -1092,6 +1097,9 @@ class Expr_Call(Expr):
         ls_args = [ptrObj]
         i = 1
         for arg in self.args.list_args:
+            # For unit, skip cast
+            if arg.typeChecked == "unit":
+                continue
             # Get the value of the arg
             value = arg.codeGenExpr(lgen, className, bldr, st)
             # Cast the arg

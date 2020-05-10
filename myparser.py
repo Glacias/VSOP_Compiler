@@ -33,6 +33,8 @@ class MyParser(object):
         self.keyword = lexer.keyword
         self.operator = lexer.operator
         self.ast_root = Program()
+        # When one or more error where detected raise an error flag
+        self.errFlag = False
         global file_name
         file_name = file
 
@@ -81,6 +83,43 @@ class MyParser(object):
             p[0].add_position_name(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
             p[0].add_position_parent(p.lineno(4), p.lexpos(4) - p.lexer.line_end_pos_table[p.lineno(4)-1])
 
+    # General error rule for class
+    def p_Class_error(self, p):
+        '''Class : class type_identifier lbrace error rbrace
+                 | class type_identifier extends type_identifier lbrace error rbrace'''
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Something went wrong inside the body of class " + p[2])
+        # Raise the error flag
+        self.errFlag = True
+
+    # Error rule for class when no name is given
+    def p_Class_error_no_name(self, p):
+        '''Class : class lbrace Class_body rbrace
+                 | class extends type_identifier lbrace Class_body rbrace'''
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Must provide a name for a class.")
+        # Raise the error flag
+        self.errFlag = True
+        # Raise the error for the parser
+        raise SyntaxError
+
+    # Error rule for class when an object identifier is given as name
+    def p_Class_error_object_id_name(self, p):
+        '''Class : class object_identifier lbrace error rbrace
+                 | class object_identifier extends type_identifier lbrace Class_body rbrace'''
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Class name \"" + p[2] + "\" is incorrect, a class name must start with an uppercase letter.")
+        # Raise the error flag
+        self.errFlag = True
+        # Raise the error for the parser
+        raise SyntaxError
+
+    # Error rule for class when an object identifier is given as name for a parent
+    def p_Class_error_object_id_name_parent(self, p):
+        '''Class : class type_identifier extends object_identifier lbrace Class_body rbrace'''
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Parent class name \"" + p[4] + "\" is incorrect, a class name must start with an uppercase letter.")
+        # Raise the error flag
+        self.errFlag = True
+        # Raise the error for the parser
+        raise SyntaxError
+
     def p_Field(self, p):
         '''Field : object_identifier colon Type semicolon
                  | object_identifier colon Type assign Expr semicolon'''
@@ -92,10 +131,49 @@ class MyParser(object):
             p[0].add_init_expr(p[5])
             p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
+    # Error rule for field when it is not ended with a semicolon
+    def p_Field_error_semicolon(self, p):
+        '''Field : object_identifier colon Type
+                 | object_identifier colon Type assign Expr'''
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Field " + p[1] + " must end with a semicolon.")
+        if(len(p)==5):
+            p[0] = Field(p[1], p[3])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        else:
+            p[0] = Field(p[1], p[3])
+            p[0].add_init_expr(p[5])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        # Raise the error flag
+        self.errFlag = True
+
+    # Error rules for field when the type is not declared
+    def p_Field_error_type(self, p):
+        '''Field : object_identifier semicolon
+                 | object_identifier assign Expr semicolon'''
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Must declare the type of field " + p[1])
+        if(len(p)==5):
+            p[0] = Field(p[1], "")
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        else:
+            p[0] = Field(p[1], "")
+            p[0].add_init_expr(p[3])
+            p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        # Raise the error flag
+        self.errFlag = True
+
     def p_Method(self, p):
         'Method : object_identifier lpar Formals rpar colon Type Block'
         p[0] = Method(p[1], p[3], p[6], p[7])
         p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+
+    # General error rule for method
+    def p_Method_error(self, p):
+        'Method : object_identifier lpar error rpar colon Type Block'
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Something went wrong inside the formals of method " + p[1])
+        p[0] = Method(p[1], "", p[6], p[7])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        # Raise the error flag
+        self.errFlag = True
 
     def p_Type(self, p):
         '''Type : type_identifier
@@ -122,14 +200,58 @@ class MyParser(object):
             p[0] = p[1]
             p[0].add_formal(p[3])
 
+    # Error rule for formals when not separated by a comma
+    def p_Formals_error_comma(self, p):
+        '''Formals : Formals Formal'''
+        error_message_node(p[2], "Formals must be separeted by a comma.")
+        p[0] = p[1]
+        p[0].add_formal(p[2])
+        # Raise the error flag
+        self.errFlag = True
+
     def p_Formal(self, p):
         'Formal : object_identifier colon Type'
         p[0] = Formal(p[1], p[3])
         p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
+        # Error rule for formals when type is not declared
+    def p_Formals_error_type(self, p):
+        'Formal : object_identifier'
+        p[0] = Formal(p[1], "")
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Must declare the type of formal " + p[1])    
+        # Raise the error flag
+        self.errFlag = True
+
     def p_Block(self, p):
         'Block : lbrace Block_body rbrace'
         p[0] = p[2]
+
+    # General error rule for block
+    def p_Block_error(self, p):
+        '''Block : lbrace error rbrace'''
+        p[0] = Expr_Unit()
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Something went wrong inside a block/between braces")
+        # Raise the error flag
+        self.errFlag = True
+
+    # Error rule for empty block
+    def p_Block_error_empty(self, p):
+        '''Block : lbrace rbrace'''
+        p[0] = Expr_Unit()
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "A block must not be empty")
+        # Raise the error flag
+        self.errFlag = True
+
+    # Error rule for detecting block ending with a semicolon
+    def p_Block_error_end_semicolon(self, p):
+        '''Block : lbrace Block_body semicolon rbrace'''
+        p[0] = p[2]
+        error_message_line_col(p.lineno(3), p.lexpos(3) - p.lexer.line_end_pos_table[p.lineno(3)-1], "The last expression of a block must NOT end with a semicolon.")
+        # Raise the error flag
+        self.errFlag = True
 
     def p_Block_body(self, p):
         '''Block_body : Expr
@@ -142,6 +264,14 @@ class MyParser(object):
             p[0] = p[1]
             p[0].add_expr(p[3])
             p[0].add_position_from_node(p[3])
+
+     # Error rule for block body when expression are not separated by semicolon
+    def p_Block_body_error_expr_semicolon(self, p):
+        '''Block_body : Block_body Expr'''
+        p[0] = p[1]
+        error_message_node(p[2], "Expressions of a block must be separeted by a semicolon.")
+        # Raise the error flag
+        self.errFlag = True
 
     ## Expressions
     def p_Expr_If_then(self, p):
@@ -170,6 +300,21 @@ class MyParser(object):
             p[0] = Expr_let(p[2], p[4], p[8])
             p[0].add_init_expr(p[6])
             p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
+
+    #Error rule for let when type is not declared
+    def p_Expr_let_error_type(self, p):
+        '''Expr : let object_identifier in Expr
+                | let object_identifier assign Expr in Expr '''
+        if(len(p)==5):
+            p[0] = Expr_let(p[2], "", p[4])
+            p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
+        else:
+            p[0] = Expr_let(p[2], "", p[6])
+            p[0].add_init_expr(p[4])
+            p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Must declare the type of let " + p[2])
+        # Raise the error flag
+        self.errFlag = True
 
     def p_Expr_assign(self, p):
         'Expr : object_identifier assign Expr'
@@ -218,6 +363,15 @@ class MyParser(object):
         p[0] = Expr_New(p[2])
         p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
 
+    # Error rule for new when an object identifier is used
+    def p_Expr_New_error_obj_id(self, p):
+        'Expr : new object_identifier'
+        p[0] = Expr_New(p[2])
+        p[0].add_position(p.lineno(2), p.lexpos(2) - p.lexer.line_end_pos_table[p.lineno(2)-1])
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "New must be called on a type identifier, type identifier start with an uppercase letter.")
+        # Raise the error flag
+        self.errFlag = True
+
     def p_Expr_Object_id(self, p):
         'Expr : object_identifier'
         p[0] = Expr_Object_identifier(p[1])
@@ -228,7 +382,6 @@ class MyParser(object):
         p[0] = p[1]
         p[0].add_position_from_node(p[1])
         
-
     def p_Expr_Unit(self, p):
         'Expr : lpar rpar'
         p[0] = Expr_Unit()
@@ -239,11 +392,19 @@ class MyParser(object):
         p[0] = p[2]
         p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
+    # General error rule for Par
+    def p_Expr_Par_expr_error(self, p):
+        'Expr : lpar error rpar'
+        p[0] = Expr_Unit()
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+        error_message_line_col(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1], "Something went wrong between/with parentheses")
+        # Raise the error flag
+        self.errFlag = True
+
     def p_Expr_block(self,p):
         'Expr : Block'
         p[0] = p[1]
         p[0].add_position_from_node(p[1])
-        
 
     def p_Args(self, p):
         '''Args :
@@ -285,17 +446,34 @@ class MyParser(object):
             error_str = file_name + ":" + str(self.lex.lexer.lineno)
             error_str += ":" + str(self.lex.lexer.lexpos - self.lex.lexer.line_end_pos-1)
             error_str += ": syntax error.\n  "
-            error_str += "The parser reached the end of file and detected an error, this is probably due to a missing brace\n"
+            error_str += "The parser reached the end of file and detected an error, this is probably due to a missing brace.\n"
             sys.stderr.write(error_str)
         else:
             error_message(p, "An error occured while parsing the following token : " + str(p.value))
-        sys.exit(1)
+        # Raise the error flag
+        self.errFlag = True
 
 
-### General Functions
+### Error message functions
 # Generate error message
 def error_message(token, description):
     error_str = file_name + ":" + str(token.lexer.lineno)
     error_str += ":" + str(token.lexpos - token.lexer.line_end_pos)
+    error_str += ": syntax error.\n  " + description + "\n"
+    sys.stderr.write(error_str)
+
+# Generate error message
+def error_message_node(node, description):
+    # Generate the text of the error
+    error_str = file_name + ":" + str(node.line)
+    error_str += ":" + str(node.col)
+    error_str += ": syntax error.\n  " + description + "\n"
+    sys.stderr.write(error_str)
+
+# Generate error message for a class
+def error_message_line_col(line, col, description):
+    # Generate the text of the error
+    error_str = file_name + ":" + str(line)
+    error_str += ":" + str(col)
     error_str += ": syntax error.\n  " + description + "\n"
     sys.stderr.write(error_str)
