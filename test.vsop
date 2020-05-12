@@ -3,11 +3,17 @@ class A {
 }
 
 class B extends A {
-    ut1 : unit <- if true then v.print("ok 1\n");
+    ut1 : unit <- ();
 }
 
 class Main extends B {
     main() : int32 {
+        printBool(true or true);
+        1 > 0;
+        2 >= 2;
+        1 > 0 or 2 >= 3;
+        printBool(false xor true);
+        printInt32(7 % 3);
         0
     }
 }

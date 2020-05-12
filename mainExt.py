@@ -9,32 +9,16 @@ import argparse
 import sys
 import os
 from llvmlite import ir
-from myLexer import *
-from myParser import *
-from mySemanticAnalysis import *
-from myLLVMGenerator import *
+from myLexerExt import *
+from myParserExt import *
+from mySemanticAnalysisExt import *
+from myLLVMGeneratorExt import *
 from myObject import *
-from mainExt import *
 
-if __name__ == '__main__':
-    # Parsing arguments
-    parser_arg = argparse.ArgumentParser()
-    parser_arg.add_argument('path', help='Path to the input VSOP source code', metavar='<SOURCE-FILE>')
-    grp = parser_arg.add_mutually_exclusive_group()
-    grp.add_argument('-lex', help='Part 1 : lexical analysis', action="store_true")
-    grp.add_argument('-parse', help='Part 2 : syntax analysis', action="store_true")
-    grp.add_argument('-check', help='Part 3 : semantic analysis', action="store_true")
-    grp.add_argument('-llvm', help='Part 4 : generating the LLVM IR', action="store_true")
-    parser_arg.add_argument('-ext', help='Special mode incuding extensions', action="store_true")
-    args = parser_arg.parse_args()
-
+def mainExt(args):
     # Check for which argument was selected
-    # For extensions launch a special main
-    if args.ext:
-        mainExt(args)
-
     # Lexical analysis
-    elif args.lex:
+    if args.lex:
         # Set file_name
         file_name = args.path.split('\\')[-1:][0]
         # Create lexer
@@ -84,7 +68,7 @@ if __name__ == '__main__':
 
         # Create parser
         mypars = MyParser(mylex, file_name)
-        mypars.build(debug=False) # Build the parser
+        mypars.build(debug=False, tabmodule='parsetabExt') # Build the parser
 
         # Give the parser some input
         f = open(args.path, "r")
@@ -108,7 +92,7 @@ if __name__ == '__main__':
 
         # Create parser
         mypars = MyParser(mylex, file_name)
-        mypars.build(debug=False) # Build the parser
+        mypars.build(debug=False, tabmodule='parsetabExt') # Build the parser
 
         # Give the parser some input
         f = open(args.path, "r")
@@ -135,7 +119,7 @@ if __name__ == '__main__':
 
         # Create parser
         mypars = MyParser(mylex, file_name)
-        mypars.build(debug=False) # Build the parser
+        mypars.build(debug=False, tabmodule='parsetabExt') # Build the parser
 
         # Give the parser some input
         f = open(args.path, "r")
@@ -176,7 +160,7 @@ if __name__ == '__main__':
 
         # Create parser
         mypars = MyParser(mylex, file_name)
-        mypars.build(debug=False) # Build the parser
+        mypars.build(debug=False, tabmodule='parsetabExt') # Build the parser
 
         # Give the parser some input
         f = open(args.path, "r")
