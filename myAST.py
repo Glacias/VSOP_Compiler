@@ -637,6 +637,16 @@ class Expr_let(Expr):
     def codeGenExpr(self, lgen, className, bldr, st):
         # Get the type of the id
         typeId = lgen.initDict[self.type.type][0]
+        
+        # For unit return a void
+        if self.type.type == "unit":
+            # If initialised execute the code
+            if self.init_expr != "":
+                # Get the value
+                self.init_expr.codeGenExpr(lgen, className, bldr, st)
+            # Generate the body of the let
+            return self.scope_expr.codeGenExpr(lgen, className, bldr, st)
+
         # Allocate space for the arg
         ptr = bldr.alloca(typeId)
         # If it is initialized
@@ -648,15 +658,36 @@ class Expr_let(Expr):
             # Store the value of the arg
             bldr.store(vcast, ptr)
         else:
-            # Create a null constant
-            v = ir.Constant(typeId, None)
-            # Store it
-            bldr.store(v, ptr)
+            # For string declare an empty string
+            if self.type.type == "string":
+                # Create a global constant
+                string1 = "\0"
+                c_string1 = ir.Constant(ir.ArrayType(ir.IntType(8), len(string1)), bytearray(string1.encode("utf-8")))
+                global_string1 = ir.GlobalVariable(lgen.module, c_string1.type, name=("str" + str(lgen.nbrStr)))
+                lgen.nbrStr = lgen.nbrStr + 1
+                global_string1.linkage = ''
+                global_string1.global_constant = True
+                global_string1.initializer = c_string1
 
+                # Return a pointer to the global constant
+                pt = bldr.gep(global_string1, [lgen.int32(0), lgen.int32(0)], inbounds=True)
+                bldr.store(pt, ptr)
+            else:
+                # Create a null constant
+                v = ir.Constant(typeId, None)
+                # Store it
+                bldr.store(v, ptr)
+
+        # Enter new context
+        st.enter_ctx()
         # Bind the pointer to the symbol table
         st.bind(self.name, ptr)
+        # Get the value of the block
+        valueBlock = self.scope_expr.codeGenExpr(lgen, className, bldr, st)
+        # Exit the context
+        st.exit_ctx()
         # Return the value of the block
-        return self.scope_expr.codeGenExpr(lgen, className, bldr, st)
+        return valueBlock
 
 class Expr_assign(Expr):
     def __init__(self, name, expr):

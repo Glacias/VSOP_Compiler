@@ -18,11 +18,12 @@ from myObject import *
 if __name__ == '__main__':
     # Parsing arguments
     parser_arg = argparse.ArgumentParser()
-    parser_arg.add_argument('path', help='Path to the input VSOP source code')
-    parser_arg.add_argument('-lex', help='Part 1 : lexical analysis', action="store_true")
-    parser_arg.add_argument('-parse', help='Part 2 : syntax analysis', action="store_true")
-    parser_arg.add_argument('-check', help='Part 3 : semantic analysis', action="store_true")
-    parser_arg.add_argument('-llvm', help='Part 4 : generating the LLVM IR', action="store_true")
+    parser_arg.add_argument('path', help='Path to the input VSOP source code', metavar='<SOURCE-FILE>')
+    grp = parser_arg.add_mutually_exclusive_group()
+    grp.add_argument('-lex', help='Part 1 : lexical analysis', action="store_true")
+    grp.add_argument('-parse', help='Part 2 : syntax analysis', action="store_true")
+    grp.add_argument('-check', help='Part 3 : semantic analysis', action="store_true")
+    grp.add_argument('-llvm', help='Part 4 : generating the LLVM IR', action="store_true")
     args = parser_arg.parse_args()
 
     # Check for which argument was selected
