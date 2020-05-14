@@ -540,6 +540,7 @@ class Expr_while(Expr):
         Node.__init__(self)
         self.cond_expr = cond_expr
         self.body_expr = body_expr
+        self.isdowhile = False
 
     def __str__(self):
         str = get_object_string("While", [self.cond_expr, self.body_expr])
@@ -547,6 +548,9 @@ class Expr_while(Expr):
         if self.typeChecked != "":
             str += " : " + self.typeChecked
         return str
+
+    def set_isdowhile(self):
+        self.isdowhile = True
 
     # Check the expressions of while
     def checkExpr(self, gst, st, file_name, error_buffer):
@@ -566,8 +570,13 @@ class Expr_while(Expr):
         bb_loop = bldr.append_basic_block("loop")
         bb_after_loop = bldr.append_basic_block("after_loop")
 
-        # Enter the cnd
-        bldr.branch(bb_cond)
+        # Check for do while
+        if self.isdowhile:
+            # Enter the loop
+            bldr.branch(bb_loop)
+        else:
+            # Enter the cnd
+            bldr.branch(bb_cond)
 
         # Build the cond
         bldr.position_at_end(bb_cond)
@@ -582,7 +591,6 @@ class Expr_while(Expr):
         # Return to the after loop
         bldr.position_at_end(bb_after_loop)
         return lgen.void
-
 
 class Expr_let(Expr):
     def __init__(self, name, type, scope_expr):

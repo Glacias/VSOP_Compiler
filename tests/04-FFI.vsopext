@@ -1,16 +1,22 @@
-external strlen(s : string) : int32;
+external strlen(s : string) : int32; // Declare C's strlen function
+									 // Here we assume string has the same
+									 // representation as in C
 
 class String { 
     s : string;
 
     init(theS : string) : string { s <- theS }
-    length() : int32 { strlen(s) }
+    length() : int32 { 
+    	strlen(s) // No method strlen on self, but external strlen is defined
+    }
 }
 
-class Main extends String {
+class Main {
     main() : int32 {
-        let s : string <- init("I am the string") in { print("The string is \"").print(s).print("\"\n") };
-        print("Length = ").printInt32(length()).print("\n");
+        let obj_Str : String <- new String in { 
+        	obj_Str.init("len is 8");
+			print("Length = ").printInt32(obj_Str.length()).print("\n")
+        };
         0
     }
 }

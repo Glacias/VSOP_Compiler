@@ -17,6 +17,6 @@ class B extends A {
 
 class Main extends B {
     main() : int32 {
-        metUnit((),2,(), true, ()); ut1; 1
+        metUnit((),2,(), true, ()); ut1; 0
     }
 }

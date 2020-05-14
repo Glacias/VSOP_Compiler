@@ -14,7 +14,7 @@ class MyParser(object):
     # Precedence and associativity rules
     precedence = (
     ('nonassoc', 'if_then', 'let_prec'),
-    ('nonassoc', 'else', 'while_prec', 'let_prec_assign'),
+    ('nonassoc', 'else', 'while_prec', 'let_prec_assign', 'dowhile_prec'),
     ('right', 'assign'),
     ('left', 'and', 'or', 'xor'),
     ('right', 'not'),
@@ -305,6 +305,12 @@ class MyParser(object):
     def p_Expr_while(self, p):
         'Expr : while Expr do Expr %prec while_prec'
         p[0] = Expr_while(p[2], p[4])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+
+    def p_Expr_dowhile(self, p):
+        'Expr : do Expr while Expr %prec dowhile_prec'
+        p[0] = Expr_while(p[4], p[2])
+        p[0].set_isdowhile()
         p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_let(self, p):
