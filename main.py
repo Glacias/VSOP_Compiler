@@ -14,7 +14,6 @@ from myParser import *
 from mySemanticAnalysis import *
 from myLLVMGenerator import *
 from myObject import *
-from mainExt import *
 
 if __name__ == '__main__':
     # Parsing arguments
@@ -28,15 +27,24 @@ if __name__ == '__main__':
     parser_arg.add_argument('-ext', help='Special mode incuding extensions', action="store_true")
     args = parser_arg.parse_args()
 
+    # Set file_name
+    file_name = args.path.split('\\')[-1:][0]
+    # Get the type of the file
+    file_type = file_name.split('.')[1]
+
     # Check for which argument was selected
     # For extensions launch a special main
     if args.ext:
+        from mainExt import *
         mainExt(args)
+
+    # Check that the type of the file is .vsop
+    elif file_type != "vsop":
+        sys.stderr.write("File extension should be .vsop")
+        sys.exit(1)
 
     # Lexical analysis
     elif args.lex:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -73,9 +81,6 @@ if __name__ == '__main__':
 
     # Syntax analysis
     elif args.parse:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
-
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -97,9 +102,6 @@ if __name__ == '__main__':
 
     # Semantic analysis
     elif args.check:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
-
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -124,9 +126,6 @@ if __name__ == '__main__':
 
     # Code generation
     elif args.llvm:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
-
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -165,9 +164,6 @@ if __name__ == '__main__':
 
     # Create executable
     else:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
-
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer

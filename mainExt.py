@@ -16,11 +16,18 @@ from myLLVMGeneratorExt import *
 from myObject import *
 
 def mainExt(args):
+    # Set file_name
+    file_name = args.path.split('\\')[-1:][0]
+    # Get the type of the file
+    file_type = file_name.split('.')[1]
+    # Check that the type of the file is .vsopext
+    if file_type != "vsopext":
+        sys.stderr.write("File extension should be .vsopext")
+        sys.exit(1)
+
     # Check for which argument was selected
     # Lexical analysis
     if args.lex:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -57,9 +64,6 @@ def mainExt(args):
 
     # Syntax analysis
     elif args.parse:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
-
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -81,9 +85,6 @@ def mainExt(args):
 
     # Semantic analysis
     elif args.check:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
-
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -108,9 +109,6 @@ def mainExt(args):
 
     # Code generation
     elif args.llvm:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
-
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -149,9 +147,6 @@ def mainExt(args):
 
     # Create executable
     else:
-        # Set file_name
-        file_name = args.path.split('\\')[-1:][0]
-
         # Create lexer
         mylex = MyLexer(file_name)
         mylex.build() # Build the lexer
@@ -186,7 +181,7 @@ def mainExt(args):
         codeStr = objectCode + "\n\n; Generated llvm code below\n\n" + codeStr
 
         # Create a file that will old the llvm code string
-        file_title = file_name[:-5]
+        file_title = file_name[:-8]
         codefile = open(file_title + "_to_compile.ll", "w")
         codefile.write(codeStr)
         codefile.close()

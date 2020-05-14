@@ -1,0 +1,34 @@
+class Main {
+    main() : int32 {
+    	// OR
+    	print("Checks for OR :\n");
+    	print("True or False = ").printBool(true or false).print("\n");
+        print("False or True = ").printBool(false or true).print("\n");
+        print("True or True = ").printBool(true or true).print("\n");
+        print("False or False = ").printBool(false or false).print("\n");
+        // Check the short circuit of or
+        if { print("OK\n"); true } or { print("KO\n"); false } then print("OK\n") else print("KO\n");
+        // XOR
+        print("\nChecks for XOR :\n");
+        print("True xor False = ").printBool(true xor false).print("\n");
+        print("False xor True = ").printBool(false xor true).print("\n");
+        print("True xor True = ").printBool(true xor true).print("\n");
+        print("False xor False = ").printBool(false xor false).print("\n");
+        // >
+        print("\nChecks for > :\n");
+        print("7 > 3 = ").printBool(7 > 3).print("\n");
+        print("7 > 7 = ").printBool(7 > 7).print("\n");
+        print("7 > 10 = ").printBool(7 > 10).print("\n");
+        // >=
+        print("\nChecks for >= :\n");
+        print("7 >= 3 = ").printBool(7 >= 3).print("\n");
+        print("7 >= 7 = ").printBool(7 >= 7).print("\n");
+        print("7 >= 10 = ").printBool(7 >= 10).print("\n");
+        // % (Modulo)
+        print("\nChecks for % (modulo) :\n");
+        print("7 % 3 = ").printInt32(7 % 3).print("\n");
+        print("13 % 13 = ").printInt32(13 % 13).print("\n");
+        print("15 % 28 = ").printInt32(15 % 28).print("\n");
+        0
+    }
+}

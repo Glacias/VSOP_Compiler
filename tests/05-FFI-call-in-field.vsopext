@@ -1,0 +1,10 @@
+external strlen(s : string) : int32;
+
+class Main {
+    length : int32 <- let l : int32 in { strlen("Len is 8") } ;
+
+    main() : int32 {
+        print("Length = ").printInt32(length).print("\n");
+        0
+    }
+}
