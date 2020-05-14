@@ -21,6 +21,7 @@ class MyParser(object):
     ('nonassoc', 'lower', 'larger', 'lower_equal', 'larger_equal', 'equal'),
     ('left', 'plus', 'minus'),
     ('left', 'times', 'div', 'modulo'),
+    ('nonassoc', 'plusplus', 'minusminus'),
     ('right', 'uminus', 'isnull'),
     ('right', 'pow'),
     ('left', 'dot'),
@@ -52,6 +53,16 @@ class MyParser(object):
             self.ast_root.add_position(0,0)
         else:
             self.ast_root.add_class(p[2])
+        p[0] = self.ast_root
+
+    def p_Program_ext_met(self, p):
+        '''Program : External_met
+                   | Program External_met'''
+        if(len(p)==2):
+            self.ast_root.add_external(p[1])
+            self.ast_root.add_position(0,0)
+        else:
+            self.ast_root.add_external(p[2])
         p[0] = self.ast_root
 
     def p_Class_body(self, p):
@@ -119,6 +130,12 @@ class MyParser(object):
         self.errFlag = True
         # Raise the error for the parser
         raise SyntaxError
+
+    # External method / Foreign Function (FF)
+    def p_External_met(self, p):
+        'External_met : external object_identifier lpar Formals rpar colon Type semicolon'
+        p[0] = External_met(p[2], p[4], p[7])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Field(self, p):
         '''Field : object_identifier colon Type semicolon
@@ -328,8 +345,17 @@ class MyParser(object):
 
     def p_Expr_UnOp(self, p):
         '''Expr : not Expr
-                | isnull Expr'''
+                | isnull Expr
+                | plusplus Expr
+                | minusminus Expr'''
         p[0] = Expr_UnOp(p[1], p[2])
+        p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
+
+    def p_Expr_UnOp_ext(self, p):
+        '''Expr : Expr plusplus
+                | Expr minusminus'''
+        p[0] = Expr_UnOp(p[2], p[1])
+        p[0].set_expr_is_left()
         p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
 
     def p_Expr_BinOp(self, p):
@@ -353,15 +379,20 @@ class MyParser(object):
 
     def p_Expr_Call(self, p):
         '''Expr : object_identifier lpar Args rpar
-                | Expr dot object_identifier lpar Args rpar'''
+                | Expr dot object_identifier lpar Args rpar
+                | Expr double_colon type_identifier dot object_identifier lpar Args rpar'''
         if(len(p)==5):
             p[0] = Expr_Call(p[1], p[3])
             p[0].add_position(p.lineno(1), p.lexpos(1) - p.lexer.line_end_pos_table[p.lineno(1)-1])
-        else:
+        elif(len(p)==7):
             p[0] = Expr_Call(p[3], p[5])
             p[0].add_object_expr(p[1])
             p[0].add_position_from_node(p[1])
-            
+        else:
+            p[0] = Expr_Call(p[5], p[7])
+            p[0].add_object_expr(p[1])
+            p[0].add_caller_cl_name(p[3])
+            p[0].add_position_from_node(p[1])
 
     def p_Expr_New(self, p):
         'Expr : new type_identifier'

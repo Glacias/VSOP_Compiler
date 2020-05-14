@@ -1059,8 +1059,7 @@ class Expr_Call(Expr):
         classInfo = gst.lookupForClass(typeObjectExpr)
         # Check that class info exist
         if classInfo is None:
-            #error_message_ast(self.line, self.col, "called on invalid object (probably self)", file_name, error_buffer)
-            # currently catches wrong self. in field
+            error_message_ast(self.line, self.col, "called on invalid object", file_name, error_buffer)
             return "Object" # Error recovery
 
         # Get method info
@@ -1120,9 +1119,8 @@ class Expr_Call(Expr):
         ob2 = bldr.gep(vt, [lgen.int32(0), lgen.int32(nbrMet)], inbounds=True)
         met = bldr.load(ob2)
 
-        # Cast the ptr_object to the type of the first argument if required
-        if metInfo[1].args[0] != clInitDictInfo[0]:
-            ptrObj = bldr.bitcast(ptrObj, metInfo[1].args[0])
+        # Cast the ptr_object to the type of the first argument (if required)
+        ptrObj = bldr.bitcast(ptrObj, metInfo[1].args[0])
 
         # Get the arguments
         ls_args = [ptrObj]

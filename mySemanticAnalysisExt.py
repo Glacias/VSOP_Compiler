@@ -22,6 +22,11 @@ def checkSemantic(ast, file):
     # Make global symbol table and add all classes into it
     gst = globalSymbolTable()
 
+    # Add the externals foreign functions
+    for ff in ast.list_ext:
+        # Adding a external also check that it is not declared twice
+        gst.add_external(ff)
+
     # Add the Object class
     gst.add_class(class_Object())
     typesOfType.add("Object") # Add the class Object as a new type of type
@@ -67,7 +72,7 @@ def checkSemantic(ast, file):
 class globalSymbolTable():
     def __init__(self):
         self.class_table = {}
-        self.nbr_class = 0;
+        self.external_ff_table = {}
 
     # Add a class to the table (with its fields and methods)
     def add_class(self, node_class):
@@ -131,6 +136,15 @@ class globalSymbolTable():
             # Add the class with fields and methods
             # (stored info is the class, dictonnary of fields and dictonnary of methods)
             self.class_table[node_class.name] = [node_class, dictFields, dictMethods, []]
+
+    # Add an external to the external dict
+    def add_external(self, node_external):
+        # Check that a function is not declared twice
+        extInfo = self.external_ff_table.get(node_external.name)
+        if extInfo is not None:
+            error_message(node_class.nameLine, node_class.nameCol, "Declaring an external foreign function twice is not allowed")
+        # Add the external
+        self.external_ff_table[node_external.name] = node_external
 
     # Look for a class and return the info and None if the class is not there
     def lookupForClass(self, className):

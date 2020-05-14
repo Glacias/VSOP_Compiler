@@ -17,6 +17,7 @@ class MyLexer(object):
         'class',
         'do',
         'extends',
+        'external',
         'false',
         'in',
         'int32',
@@ -42,10 +43,13 @@ class MyLexer(object):
         '(' : 'lpar',
         ')' : 'rpar',
         ':' : 'colon',
+        '::' : 'double_colon',
         ';' : 'semicolon',
         ',' : 'comma',
         '+' : 'plus',
+        '++' : 'plusplus',
         '-' : 'minus',
+        '--' : 'minusminus',
         '*' : 'times',
         '/' : 'div',
         '%' : 'modulo',
@@ -283,7 +287,7 @@ class MyLexer(object):
         return t
 
     def t_operator_long(self, t):
-        r'<-|<=|>='
+        r'<-|<=|>=|::|\+\+|\-\-'
         t.type = self.operator.get(t.value,'operator')
         return t
 

@@ -1,0 +1,17 @@
+class Point2D {
+    x : int32 <- 1;
+    y : int32 <- 2;
+    printPoint() : unit { print("x=").printInt32(x).print(", y=").printInt32(y); () }
+}
+
+class Point3D extends Point2D { 
+    z : int32 <- 3;
+    printPoint() : unit { self::Point2D.printPoint(); print(", z=").printInt32(z); () }
+}
+
+class Main {
+    main() : int32 {
+    let p : Point3D <- new Point3D in { p.printPoint() };
+    0
+    }
+}

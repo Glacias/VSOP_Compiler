@@ -67,7 +67,6 @@ def checkSemantic(ast, file):
 class globalSymbolTable():
     def __init__(self):
         self.class_table = {}
-        self.nbr_class = 0;
 
     # Add a class to the table (with its fields and methods)
     def add_class(self, node_class):

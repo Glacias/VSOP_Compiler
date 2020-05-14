@@ -1,0 +1,16 @@
+class Main {
+    main() : int32 {
+        let i : int32 <- 0 in { 
+            print("i = ").printInt32(i).print("\n");
+            print("i++ = ").printInt32(i++).print("\n");
+            print("i = ").printInt32(i).print("\n");
+            print("++i = ").printInt32(++i).print("\n");
+            print("i = ").printInt32(i).print("\n");
+            print("i-- = ").printInt32(i--).print("\n");
+            print("i = ").printInt32(i).print("\n");
+            print("--i = ").printInt32(--i).print("\n");
+            print("i = ").printInt32(i).print("\n")
+        };
+    0
+    }
+}

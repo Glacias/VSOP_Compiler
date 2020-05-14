@@ -29,14 +29,21 @@ class Program(Node):
     def __init__(self):
         Node.__init__(self)
         self.list_class = []
+        self.list_ext = []
 
     # Print the list of class
     def __str__(self):
+        if len(self.list_ext) != 0:
+            return get_list_string(self.list_ext) + get_list_string(self.list_class)
         return get_list_string(self.list_class)
 
     # Add a class to the program
     def add_class(self, c):
         self.list_class.append(c)
+
+    # Add an external method to the program
+    def add_external(self, ext):
+        self.list_ext.append(ext)
 
     # Check the type of expression in the tree
     def checkTypeTree(self, gst, file_name, error_buffer):
@@ -183,7 +190,6 @@ class Class(Node):
         # For every method, generate the code
         for mt in self.methods:
             mt.codeGen(lgen, self.name)
-
 
 # Field
 class Field(Node):
@@ -763,12 +769,16 @@ class Expr_UnOp(Expr):
         Node.__init__(self)
         self.unop = unop
         self.expr = expr
+        self.expr_is_left = False
     def __str__(self):
         str = get_object_string("UnOp", [self.unop, self.expr])
         # In case the type was checked print it
         if self.typeChecked != "":
             str += " : " + self.typeChecked
         return str
+
+    def set_expr_is_left(self):
+        self.expr_is_left = True
 
     # Check expression of unary operator
     def checkExpr(self, gst, st, file_name, error_buffer):
@@ -784,6 +794,26 @@ class Expr_UnOp(Expr):
         elif self.unop == "-":
             if typeExpr != "int32":
                 error_message_ast(self.line, self.col, "unary MINUS operator, expression must be of type int32", file_name, error_buffer)
+                return "int32" # Error recovery : int32
+            self.typeChecked = "int32"
+        # if unop is minusminus check for int32
+        elif self.unop == "--":
+            if typeExpr != "int32":
+                error_message_ast(self.line, self.col, "unary -- operator, expression must be of type int32", file_name, error_buffer)
+                return "int32" # Error recovery : int32
+            # Check that the expression is an object identifier (variable)
+            if not isinstance(self.expr, Expr_Object_identifier):
+                error_message_ast(self.line, self.col, "unary -- operator, expression must be a variable", file_name, error_buffer)
+                return "int32" # Error recovery : int32
+            self.typeChecked = "int32"
+        # if unop is plusplus check for int32
+        elif self.unop == "++":
+            if typeExpr != "int32":
+                error_message_ast(self.line, self.col, "unary ++ operator, expression must be of type int32", file_name, error_buffer)
+                return "int32" # Error recovery : int32
+            # Check that the expression is an object identifier (variable)
+            if not isinstance(self.expr, Expr_Object_identifier):
+                error_message_ast(self.line, self.col, "unary ++ operator, expression must be a variable", file_name, error_buffer)
                 return "int32" # Error recovery : int32
             self.typeChecked = "int32"
         # if unop is isnull check for class type
@@ -804,6 +834,38 @@ class Expr_UnOp(Expr):
         # if unop is minus
         elif self.unop == "-":
             return bldr.neg(value)
+        # if unop is minusminus
+        elif self.unop == "--":
+            # Get the ptr to the expr
+            ptr = st.lookup(self.expr.name)
+            # Do the minus 1
+            newVal = bldr.sub(value, lgen.int32(1))
+            # Store the value
+            bldr.store(newVal, ptr)
+            # Check if the value is to the left aka i--
+            if self.expr_is_left:
+                # Return the value before modification
+                return value
+            # The value is on the right aka --i
+            else:
+                # Return the value after modification
+                return newVal
+        # if unop is plusplus
+        elif self.unop == "++":
+            # Get the ptr to the expr
+            ptr = st.lookup(self.expr.name)
+            # Do the plus 1
+            newVal = bldr.add(value, lgen.int32(1))
+            # Store the value
+            bldr.store(newVal, ptr)
+            # Check if the value is to the left aka i++
+            if self.expr_is_left:
+                # Return the value before modification
+                return value
+            # The value is on the right aka ++i
+            else:
+                # Return the value after modification
+                return newVal
         # if unop is isnull 
         else:
             # Get the type
@@ -1004,16 +1066,30 @@ class Expr_BinOp(Expr):
                 bldr.store(valueRight, ptrBit)
             # Return the value of the and
             return bldr.load(ptrBit)
+        # Or (short circuit)
+        elif self.op ==  "or":
+            # Allocate a bit
+            ptrBit = bldr.alloca(lgen.boolean)
+            # Get the left value
+            valueLeft = self.left_expr.codeGenExpr(lgen, className, bldr, st)
+            # Store the left value
+            bldr.store(valueLeft, ptrBit)
+            # Not the left value for branch
+            pred = bldr.not_(valueLeft)
+            with bldr.if_then(pred):
+                # Get the right value
+                valueRight = self.right_expr.codeGenExpr(lgen, className, bldr, st)
+                # Store it
+                bldr.store(valueRight, ptrBit)
+            # Return the value of the and
+            return bldr.load(ptrBit)
         else:
             # Get the value of both expr
             valueLeft = self.left_expr.codeGenExpr(lgen, className, bldr, st)
             valueRight = self.right_expr.codeGenExpr(lgen, className, bldr, st)
 
-        # Or
-        if self.op == "or":
-            return bldr.or_(valueLeft, valueRight)
         # Xor
-        elif self.op == "xor":
+        if self.op == "xor":
             return bldr.xor(valueLeft, valueRight)
         # Modulo
         elif self.op == "%":
@@ -1082,8 +1158,10 @@ class Expr_Call(Expr):
     def __init__(self, method_name, args):
         Node.__init__(self)
         self.object_expr = "self"
+        self.caller_cl_name = ""
         self.method_name = method_name
         self.args = args
+        self.flagExt = False
     def __str__(self):
         str = get_object_string("Call", [self.object_expr, self.method_name, self.args])
         # In case the type was checked print it
@@ -1092,16 +1170,47 @@ class Expr_Call(Expr):
         return str
     def add_object_expr(self, expr):
         self.object_expr = expr
+    def add_caller_cl_name(self, name):
+        self.caller_cl_name = name
 
     # Check the type of the call
     def checkExpr(self, gst, st, file_name, error_buffer):
+        # Flag for self
+        flagSelf = False
         # In case of deduced self, check the type of self
         if self.object_expr == "self":
+            # Keep flag that we have been here
+            flagSelf = True
             # Check that self is in scope
             selfInfo = st.lookup("self")
             if selfInfo is None:
-                error_message_ast(self.line, self.col, "cannot access self inside field initializer", file_name, error_buffer)
-                return "Object" # Error recovery
+                # Look for method name inside external ff dict
+                extInfo = gst.external_ff_table.get(self.method_name)
+                # Check if we are calling an external
+                if extInfo is not None:
+                    # Get the arguments and formals
+                    list_arg = self.args.list_args
+                    list_formals = extInfo.formals.list_formals
+
+                    # First check that there is the same number of args and formals
+                    if len(list_arg) != len(list_formals):
+                        error_message_ast(self.line, self.col, "External foreign function " + self.method_name + " takes " + str(len(list_formals)) + " argument but " + str(len(list_arg)) + " were given", file_name, error_buffer)
+                        return extInfo.type.type # Error recovery
+
+                    # Check that arguments are the same type (order maters)
+                    for i in range(len(list_arg)):
+                        # Check type of argument
+                        typeArg = list_arg[i].checkExpr(gst, st, file_name, error_buffer)
+                        # Check that types are conform
+                        if not gst.areConform(typeArg, list_formals[i].type.type):
+                            error_message_ast(list_arg[i].line, list_arg[i].col, "argument " + list_formals[i].name + " (at position " + str(i+1) + ") should conform type " + list_formals[i].type.type + " (currently is of type " + typeArg + ")", file_name, error_buffer)
+
+                    self.flagExt = True # Change the external flag to true
+                    self.typeChecked = extInfo.type.type
+                    return self.typeChecked
+                else:
+                    error_message_ast(self.line, self.col, "cannot access self inside field initializer", file_name, error_buffer)
+                    return "Object" # Error recovery
             else:
                 # Create the self
                 selfExpr = Expr_Object_identifier("self")
@@ -1124,12 +1233,55 @@ class Expr_Call(Expr):
         classInfo = gst.lookupForClass(typeObjectExpr)
         # Check that class info exist
         if classInfo is None:
-            #error_message_ast(self.line, self.col, "called on invalid object (probably self)", file_name, error_buffer)
-            # currently catches wrong self. in field
+            error_message_ast(self.line, self.col, "called on invalid object", file_name, error_buffer)
             return "Object" # Error recovery
+
+        # In the case of a dispatch on parent class
+        if self.caller_cl_name != "":
+            # Get caller class info
+            callerClassInfo = gst.lookupForClass(self.caller_cl_name)
+            # Check that caller class info exist
+            if callerClassInfo is None:
+                error_message_ast(self.line, self.col, "unknown type " + self.caller_cl_name, file_name, error_buffer)
+                return "Object" # Error recovery
+            # Check that the expression type and caller class are conform
+            if not gst.areConform(typeObjectExpr, self.caller_cl_name):
+                error_message_ast(self.line, self.col, "cannot dispatch on parent class, " + self.object_expr.name + " type (" + typeObjectExpr + ") does not conform class name " + self.caller_cl_name, file_name, error_buffer)
+                return "Object"
 
         # Get method info
         methodInfo = gst.lookupMethodsAncestors(classInfo[0], self.method_name)[0]
+
+        # Check for call on external foreign function
+        if (methodInfo is None) and flagSelf:
+            # Look for method name inside external ff dict
+            extInfo = gst.external_ff_table.get(self.method_name)
+            # Check if we are calling an external
+            if extInfo is not None:
+                # Get the arguments and formals
+                list_arg = self.args.list_args
+                list_formals = extInfo.formals.list_formals
+
+                # First check that there is the same number of args and formals
+                if len(list_arg) != len(list_formals):
+                    error_message_ast(self.line, self.col, "External foreign function " + self.method_name + " takes " + str(len(list_formals)) + " argument but " + str(len(list_arg)) + " were given", file_name, error_buffer)
+                    return extInfo.type.type # Error recovery
+
+                # Check that arguments are the same type (order maters)
+                for i in range(len(list_arg)):
+                    # Check type of argument
+                    typeArg = list_arg[i].checkExpr(gst, st, file_name, error_buffer)
+                    # Check that types are conform
+                    if not gst.areConform(typeArg, list_formals[i].type.type):
+                        error_message_ast(list_arg[i].line, list_arg[i].col, "argument " + list_formals[i].name + " (at position " + str(i+1) + ") should conform type " + list_formals[i].type.type + " (currently is of type " + typeArg + ")", file_name, error_buffer)
+
+                self.flagExt = True # Change the external flag to true
+                self.typeChecked = extInfo.type.type
+                return self.typeChecked
+            # The external function does not exist
+            else:
+                error_message_ast(self.line, self.col, "External foreign function " + self.method_name + " is not declared", file_name, error_buffer)
+
         # Check that the method exist for that class type (also in the ancestor)
         if methodInfo is None:
             error_message_ast(self.line, self.col, "class " + typeObjectExpr + " has no method called " + self.method_name, file_name, error_buffer)
@@ -1157,6 +1309,38 @@ class Expr_Call(Expr):
 
     # Generate code for call
     def codeGenExpr(self, lgen, className, bldr, st):
+        # In case of external call
+        if self.flagExt:
+            # Get the method info
+            metInfo = lgen.extDict.get(self.method_name)
+            # Get the arguments
+            ls_args = []
+            i = 0
+            for arg in self.args.list_args:
+                # For unit, skip cast
+                if arg.typeChecked == "unit":
+                    continue
+                # Get the value of the arg
+                value = arg.codeGenExpr(lgen, className, bldr, st)
+                # Check for int32/int64 conflict
+                if metInfo[0].args[i] == lgen.int64:
+                    # Add it to the list
+                    ls_args.append(bldr.zext(value, lgen.int64))
+                    i = i + 1
+                else:
+                    # Cast the arg
+                    vcast = bldr.bitcast(value, metInfo[0].args[i])
+                    # Add it to the list
+                    ls_args.append(vcast)
+                    i = i + 1
+
+            # Call the method
+            c = bldr.call(metInfo[1], ls_args)
+            # Check for int32/int64 conflict
+            if metInfo[0].return_type == lgen.int64:
+                return bldr.trunc(c, lgen.int32)
+            return c
+
         # In case of deduced self
         if self.object_expr == "self":
             # Get the ptr to ptr to object
@@ -1171,23 +1355,33 @@ class Expr_Call(Expr):
             # Get the type
             typeObj = self.object_expr.typeChecked
 
-        # Get the class init dict info
-        clInitDictInfo = lgen.initDict[typeObj]
-        # Get the method info
-        metInfo = clInitDictInfo[3][self.method_name]
-        # Get the method number in the vtable
-        nbrMet = metInfo[0]
-        # Do the dynamic dispatch
-        # Get the vtable
-        ob = bldr.gep(ptrObj, [lgen.int32(0), lgen.int32(0)], inbounds=True)
-        vt = bldr.load(ob)
-        # Get the method inside the vtable
-        ob2 = bldr.gep(vt, [lgen.int32(0), lgen.int32(nbrMet)], inbounds=True)
-        met = bldr.load(ob2)
+        # In case of dispatch on parent class
+        if self.caller_cl_name != "":
+            # Get the class init dict info
+            clInitDictInfo = lgen.initDict[self.caller_cl_name]
+            # Get the method info
+            metInfo = clInitDictInfo[3][self.method_name]
+            # Get the method
+            met = metInfo[2]
 
-        # Cast the ptr_object to the type of the first argument if required
-        if metInfo[1].args[0] != clInitDictInfo[0]:
-            ptrObj = bldr.bitcast(ptrObj, metInfo[1].args[0])
+        # Dynamic dispatch
+        else:
+            # Get the class init dict info
+            clInitDictInfo = lgen.initDict[typeObj]
+            # Get the method info
+            metInfo = clInitDictInfo[3][self.method_name]
+            # Get the method number in the vtable
+            nbrMet = metInfo[0]
+            # Do the dynamic dispatch
+            # Get the vtable
+            ob = bldr.gep(ptrObj, [lgen.int32(0), lgen.int32(0)], inbounds=True)
+            vt = bldr.load(ob)
+            # Get the method inside the vtable
+            ob2 = bldr.gep(vt, [lgen.int32(0), lgen.int32(nbrMet)], inbounds=True)
+            met = bldr.load(ob2)
+
+        # Cast the ptr_object to the type of the first argument (if required
+        ptrObj = bldr.bitcast(ptrObj, metInfo[1].args[0])
 
         # Get the arguments
         ls_args = [ptrObj]
@@ -1396,6 +1590,21 @@ class Boolean_literal(Node):
     def checkExpr(self, gst, st, file_name, error_buffer):
         self.typeChecked = "bool"
         return self.typeChecked
+
+# External methods
+class External_met(Node):
+    def __init__(self, name, formals, type):
+        Node.__init__(self)
+        self.name = name
+        self.formals = formals
+        self.type = type
+
+    def __str__(self):
+        str = get_object_string("External", [self.name, self.formals, self.type])
+        return str
+
+    # No type check to do since we don't know anything about the foreign function
+
 
 ### General Functions
 # Create a symbol table

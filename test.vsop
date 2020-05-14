@@ -1,19 +1,16 @@
-class A {
-    v : Object <- new Object;
+external strlen(s : string) : int32;
+
+class String { 
+    s : string;
+
+    init(theS : string) : string { s <- theS }
+    length() : int32 { strlen(s) }
 }
 
-class B extends A {
-    ut1 : unit <- ();
-}
-
-class Main extends B {
+class Main extends String {
     main() : int32 {
-        printBool(true or true);
-        1 > 0;
-        2 >= 2;
-        1 > 0 or 2 >= 3;
-        printBool(false xor true);
-        printInt32(7 % 3);
+        let s : string <- init("I am the string") in { print("The string is \"").print(s).print("\"\n") };
+        print("Length = ").printInt32(length()).print("\n");
         0
     }
 }

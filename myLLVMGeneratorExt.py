@@ -54,9 +54,52 @@ class llvmGenerator:
 		# so we can define them later on 
 		self.initDict = self.initializeStructAndVTables(ast, gst)
 
+		# Dictionnary for externals foreign functions
+		self.extDict = self.initializeExtDict()
+
 		# Save the number of string created
 		self.nbrStr = 0
 
+	# Return a dictionnary for external foreign function
+	#  with already declared foreign function inside
+	def initializeExtDict(self):
+		extDict = {}
+		# Create sub module (this is also done to avoid redefining Object)
+		moduleExt = ir.Module(name="moduleExt")
+		# Exit
+		fnty = ir.FunctionType(self.void, [self.int32])
+		fn = ir.Function(moduleExt, fnty, name="exit")
+		extDict["exit"] = [fnty, fn]
+		# Free
+		fnty = ir.FunctionType(self.void, [self.int8.as_pointer()])
+		fn = ir.Function(moduleExt, fnty, name="free")
+		extDict["free"] = [fnty, fn]
+		# isspace
+		fnty = ir.FunctionType(self.int32, [self.int32])
+		fn = ir.Function(moduleExt, fnty, name="isspace")
+		extDict["isspace"] = [fnty, fn]
+		# malloc
+		fnty = ir.FunctionType(self.int8.as_pointer(), [self.int64])
+		fn = ir.Function(moduleExt, fnty, name="malloc")
+		extDict["malloc"] = [fnty, fn]
+		# realloc
+		fnty = ir.FunctionType(self.int8.as_pointer(), [self.int8.as_pointer(), self.int64])
+		fn = ir.Function(moduleExt, fnty, name="realloc")
+		extDict["realloc"] = [fnty, fn]
+		# strlen
+		fnty = ir.FunctionType(self.int64, [self.int8.as_pointer()])
+		fn = ir.Function(moduleExt, fnty, name="strlen")
+		extDict["strlen"] = [fnty, fn]
+		# strncmp
+		fnty = ir.FunctionType(self.int32, [self.int8.as_pointer(), self.int8.as_pointer(), self.int64])
+		fn = ir.Function(moduleExt, fnty, name="strncmp")
+		extDict["strncmp"] = [fnty, fn]
+		# strtoll
+		fnty = ir.FunctionType(self.int64, [self.int8.as_pointer(), self.int8.as_pointer(), self.int32])
+		fn = ir.Function(moduleExt, fnty, name="strtoll")
+		extDict["strtoll"] = [fnty, fn]
+		# Return the dict
+		return extDict
 	# Return a dictionnary for initialisation of the vtable and structures
 	def initializeStructAndVTables(self, ast, gst):
 		# Create the dictonnary
@@ -153,6 +196,28 @@ class llvmGenerator:
 	# This function is responsible for creating declaration code for all the classes
 	#  and fill the init dictionary with the corresponding useful information
 	def generateAllClass(self):
+		# Declare the externals
+		for ext in self.ast.list_ext:
+			# Check that it is not already defined
+			ExtDictInfo = self.extDict.get(ext.name)
+			if ExtDictInfo is not None:
+				continue
+			# Get the llvmlite type of the return type
+			llvmExtFFReturnType = self.initDict[ext.type.type][0]
+			# Get the list of llvmlite types of the formals
+			ls_formals = []
+			for fm in ext.formals.list_formals:
+				# Skip the unit
+				if fm.type.type == "unit":
+					continue
+				ls_formals.append(self.initDict[fm.type.type][0])
+
+			# Create the external foreign function type
+			llvmExtFFType = ir.FunctionType(llvmExtFFReturnType, ls_formals)
+			# Declare the external foreign function
+			llvmExtFF = ir.Function(self.module, llvmExtFFType, name=(ext.name))
+			# Add the info to the external dict
+			self.extDict[ext.name] = [llvmExtFFType, llvmExtFF]
 		# Declare all class structure and VTable (before their body) and their method new and init
 		for cl in self.ast.list_class:
 			# Struct and VTable
