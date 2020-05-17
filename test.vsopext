@@ -1,21 +1,15 @@
+class A {
+    p() : Object { print("KO\n") }
+}
+
+class B extends A {
+    p() : Object { print("OK\n") }
+}
+
 class Main {
+    obj : A <- new B;
     main() : int32 {
-        let i : int32 <- 0 in { 
-            print("Simple check :\n");
-            do print("OK\n") while false;
-
-            print("\nBefore do while :\n");
-            print("i = ").printInt32(i).print("\n");
-
-            print("\nIn do while :\n");
-            do {
-                print("i = ").printInt32(i).print("\n");
-                i++
-            }
-            while { i < 3 };
-            print("\nAfter do while :\n");
-            print("i = ").printInt32(i).print("\n")
-        };
+        obj.p();
         0
     }
 }

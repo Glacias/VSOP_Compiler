@@ -174,8 +174,10 @@ class Class(Node):
                     continue
                 # Get the pointer to the field
                 ptr_f = bldrInit.gep(ptr_obj, [lgen.int32(0), lgen.int32(pos_f)])
+                # Cast if necessary
+                cast_f = bldrInit.bitcast(value_f, lgen.initDict.get(fl.type.type)[0])
                 # Store the value in the field
-                bldrInit.store(value_f, ptr_f)
+                bldrInit.store(cast_f, ptr_f)
 
         # Return the pointer to the obj
         bldrInit.ret(ptr_obj)
